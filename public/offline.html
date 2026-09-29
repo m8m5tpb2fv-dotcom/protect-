@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Нет соединения · Рядом</title>
+    <style>
+      @font-face { font-family: Inter; src: url(/fonts/inter-cyrillic-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+      :root { --bg: #f4f3ef; --ink: #0d0d0f; --muted: #7a7a80; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0a0a0b; --ink: #f3f2ee; --muted: #8d8d93; } }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+      h1 { font-size: 30px; letter-spacing: -0.035em; margin: 24px 0 8px; }
+      p { color: var(--muted); font-size: 16px; margin: 0; }
+      button { margin-top: 28px; height: 52px; padding: 0 28px; border: 0; border-radius: 18px; background: #d4f25c; color: #0d0d0f; font: 600 16px Inter, system-ui; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon.svg" width="72" height="72" alt="" />
+      <h1>Нет соединения</h1>
+      <p>Проверьте интернет — мы сохраним всё, что вы делали.</p>
+      <button onclick="location.reload()">Повторить</button>
+    </main>
+  </body>
+</html>
