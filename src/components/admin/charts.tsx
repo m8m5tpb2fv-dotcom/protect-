@@ -30,7 +30,11 @@ export function ColumnChart({ data, unit, label }: { data: { day: string; value:
             </g>
           );
         })}
-</svg>
+      </svg>
+      <div className="mt-1.5 flex justify-between text-[11px] text-muted" aria-hidden>
+        <span>{fmtDay(data[0]?.day ?? "")}</span>
+        <span>{fmtDay(data[data.length - 1]?.day ?? "")}</span>
+      </div>
       {hover != null && data[hover] && (
         <div className="pointer-events-none absolute -top-2 rounded-xl bg-inverse px-3 py-1.5 text-[12.5px] text-inverse-ink shadow-float" style={{ left: `clamp(0px, calc(${((hover + 0.5) / data.length) * 100}% - 50px), calc(100% - 110px))` }}>
           <span className="opacity-70">{fmtDay(data[hover].day)}</span> · <b className="tabular">{format(data[hover].value)}</b>
