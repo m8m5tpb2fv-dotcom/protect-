@@ -33,11 +33,20 @@ export function OrderCard({ o, href, extra, viewer = "client", clientName }: { o
               {o.subName} · №{o.number} · {relative(o.createdAt)}
             </p>
           </div>
-          <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+          {(o.status === "new" || o.status === "responses") && viewer === "client" ? (
+            <span
+              className={cn("mono inline-flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 text-[18px] leading-none tabular", o.responsesCount ? "border-accent text-ink shadow-[0_0_18px_-4px_var(--accent)]" : "border-line-strong text-muted")}
+              title={pl(o.responsesCount, ["отклик", "отклика", "откликов"])}
+              aria-label={pl(o.responsesCount, ["отклик", "отклика", "откликов"])}
+            >
+              {o.responsesCount}
+            </span>
+          ) : (
+            <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+          )}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <OrderStatusBadge status={o.status} />
-          {(o.status === "new" || o.status === "responses") && o.responsesCount > 0 && <Badge tone="ink">{pl(o.responsesCount, ["отклик", "отклика", "откликов"])}</Badge>}
           {(o.status === "new" || o.status === "responses") && <Badge>{URGENCY[o.urgency].label}</Badge>}
           {needsReview && <Badge tone="warning">Оставьте отзыв</Badge>}
           {o.districtName && (

@@ -15,6 +15,7 @@ import { Input, Textarea } from "@/components/ui/field";
 import { RatingInline } from "@/components/ui/rating";
 import { useToast } from "@/components/ui/toast";
 import { useMainButton, useTelegram } from "@/components/telegram/telegram-provider";
+import { BudgetDial } from "@/components/domain/budget-dial";
 
 export type WizardCatalog = {
   id: number;
@@ -450,7 +451,12 @@ export function OrderWizard({
               })}
             </div>
             {errors.urgency && <p className="mt-2 px-1 text-[13px] text-danger">{errors.urgency}</p>}
-            <Input className="mt-5" label="Бюджет, ₽" optional inputMode="numeric" placeholder="Например, 1500" value={d.budget} onChange={(e) => set({ budget: e.target.value.replace(/[^\d]/g, "").slice(0, 8) })} hint="Можно оставить пустым — исполнители предложат цену" />
+            <div className="mt-6">
+              <p className="mb-2 px-1 text-[13px] font-semibold text-ink-2">
+                Бюджет <span className="font-normal text-muted">· необязательно — исполнители предложат цену</span>
+              </p>
+              <BudgetDial value={d.budget} onChange={(budget) => set({ budget })} typical={(d.serviceId ? (providerPrice(d.serviceId) ?? svcById.get(d.serviceId)?.priceFrom) : null) ?? null} />
+            </div>
           </section>
         )}
 

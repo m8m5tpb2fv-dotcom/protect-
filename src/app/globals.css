@@ -296,6 +296,47 @@
     font-variant-numeric: tabular-nums;
     line-height: 0.95;
   }
+  /* monospace numerals (reference: tip calculator) */
+  .mono {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+  }
+  /* slider over a tick ruler: transparent track, thin lime needle */
+  .dial-range {
+    appearance: none;
+    background: transparent;
+    cursor: grab;
+  }
+  .dial-range::-webkit-slider-runnable-track {
+    height: 40px;
+    background: transparent;
+  }
+  .dial-range::-moz-range-track {
+    height: 40px;
+    background: transparent;
+  }
+  .dial-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 4px;
+    height: 40px;
+    border-radius: 2px;
+    background: #34e39a;
+    box-shadow: 0 0 14px rgb(52 227 154 / 0.7);
+  }
+  .dial-range::-moz-range-thumb {
+    width: 4px;
+    height: 40px;
+    border: 0;
+    border-radius: 2px;
+    background: #34e39a;
+    box-shadow: 0 0 14px rgb(52 227 154 / 0.7);
+  }
+  .dial-range:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 4px;
+    border-radius: 12px;
+  }
   .grain::after {
     content: "";
     position: absolute;

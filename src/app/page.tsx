@@ -26,7 +26,7 @@ export default async function HomePage() {
     listProviders(city.id, { sort: "available", limit: 10 }),
     listProviders(city.id, { sort: "new", limit: 10 }),
     favoriteIds(user?.id),
-    getContent(["home.urgent", "home.announcement"]),
+    getContent(["home.urgent", "home.announcement", "faq.how", "faq.price", "faq.verify"]),
   ]);
   const popularServices = catalog.categories.flatMap((c) => c.subs.flatMap((s) => s.services.filter((v) => v.isPopular).map((v) => ({ ...v, icon: s.icon })))).slice(0, 14);
   const [first, ...rest] = catalog.categories;
@@ -155,6 +155,32 @@ export default async function HomePage() {
           ))}
         </ol>
       </section>
+
+      {/* Tips — lesson-style cards (reference: surf «Урок 3») */}
+      {(() => {
+        const tips = (["faq.how", "faq.price", "faq.verify"] as const).map((k) => content[k]).filter(Boolean);
+        const art = [["lime", "Sparkles"], ["amber", "Wallet"], ["slate", "ShieldCheck"]];
+        return tips.length ? (
+          <section className="mt-10 lg:mt-16" aria-labelledby="tips">
+            <SectionHeader title={<span id="tips">Полезно знать</span>} />
+            <div className="grid gap-2.5 md:grid-cols-3 md:gap-3">
+              {tips.map((t, i) => (
+                <Link key={t!.key} href="/support" className="press lift bezel group flex overflow-hidden rounded-[28px] p-1.5">
+                  <div className="flex min-w-0 flex-1 flex-col justify-between p-3.5">
+                    <p className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
+                      <Sparkles className="h-3.5 w-3.5" /> Совет {i + 1}
+                    </p>
+                    <p className="mt-2 text-[17px] font-medium leading-snug tracking-[-0.02em]">{t!.title}</p>
+                    <p className="mt-3 text-[13px] font-semibold">Читать →</p>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/art/${art[i][0]}/${art[i][1]}/tip-${i}.svg?w=480&h=520`} alt="" loading="lazy" className="w-[38%] shrink-0 rounded-[22px] object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null;
+      })()}
 
       <section className="mt-10 lg:mt-16">
         <SectionHeader title="Новые исполнители" subtitle={`Недавно присоединились ${city.nameIn}`} />
