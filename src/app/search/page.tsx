@@ -53,7 +53,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
             {result.matched.services.slice(0, 4).map((s) => {
               const sb = catalog.subById.get(s.subcategoryId);
               return (
-                <Link key={s.id} href={`/order/new?service=${s.slug}`} className="press inline-flex h-10 items-center gap-2 rounded-full bg-surface px-4 text-[14px] font-semibold shadow-soft">
+                <Link key={s.id} href={`/order/new?service=${s.slug}`} className="press inline-flex h-10 items-center gap-2 rounded-full bezel px-4 text-[14px] font-semibold">
                   {sb && <CatalogIcon name={sb.icon} className="h-4 w-4" />} {s.name}
                 </Link>
               );

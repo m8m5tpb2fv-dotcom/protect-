@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminProviders } from "@/server/services/admin";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -12,7 +12,7 @@ import { inArray } from "drizzle-orm";
 const STATUS: Record<string, [string, "warning" | "success" | "danger" | "neutral"]> = { pending: ["На модерации", "warning"], active: ["Активен", "success"], rejected: ["Отклонён", "danger"], suspended: ["Приостановлен", "danger"], draft: ["Черновик", "neutral"] };
 
 export default async function AdminProviders({ searchParams }: PageProps<"/admin/providers">) {
-  await requireAdmin();
+  await pageAdmin();
   const p = await searchParams;
   const q = sp(p.q);
   const status = sp(p.status);

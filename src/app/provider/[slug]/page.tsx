@@ -5,6 +5,8 @@ import { CalendarClock, Clock3, MapPin, MessageCircle, Phone, Repeat2, ShieldChe
 import { APP } from "@/config/app";
 import { getCurrentUser } from "@/server/auth/session";
 import { getProviderProfile, isFavorite, listProviders } from "@/server/services/providers";
+import { getCatalog } from "@/server/services/catalog";
+import { ServicePicker } from "@/components/domain/service-picker";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, StatusDot } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -48,6 +50,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
   const isOwner = user?.provider?.id === provider.id;
   const isStaff = user?.role === "admin" || user?.role === "moderator";
   if (provider.status !== "active" && !isOwner && !isStaff) notFound();
+  const catalog = await getCatalog();
   const [fav, similar] = await Promise.all([user ? isFavorite(user.id, provider.id) : false, listProviders(provider.cityId, { sort: "top", subIds: [provider.primarySubcategoryId], limit: 8, excludeId: provider.id })]);
   const cover = p.coverUrl ?? `/art/${p.tone}/${p.icon}/${p.slug}-cover.svg?w=1600&h=900`;
   const v = VERIFICATION[p.verification];
@@ -88,36 +91,64 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
   return (
     <main className="mx-auto w-full max-w-[1320px] flex-1 pb-40 lg:px-6 lg:pb-16 lg:pt-6">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      {/* Hero */}
-      <div className="relative lg:overflow-hidden lg:rounded-[32px]">
-        <Media src={cover} alt="" priority className="h-[300px] sm:h-[360px] lg:h-[400px]" />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-bg lg:to-black/10" />
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[calc(var(--safe-top)+8px)] lg:p-5">
-          <PageHeader sticky={false} className="m-0 p-0 [&_button]:glass lg:hidden" />
+      {/* Hero — creator profile (reference: surf coach) */}
+      <section className="grain relative overflow-hidden rounded-b-[36px] bg-[#0b0b0c] pb-7 text-white lg:rounded-[36px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50" fetchPriority="high" />
+        <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(11_11_12/0.35)_0%,rgb(11_11_12/0.75)_45%,#0b0b0c_100%)]" />
+        <div className="relative flex items-center justify-between px-4 pt-[calc(var(--safe-top)+8px)] lg:px-6 lg:pt-6">
+          <PageHeader sticky={false} className="m-0 p-0 [&_button]:bg-white/12 [&_button]:text-white lg:hidden" />
           <div className="ml-auto flex gap-2">
-            <ShareButton title={`${p.displayName} — ${p.subName}`} path={`/provider/${p.slug}`} tgLink={tgLink} />
-            <FavoriteButton providerId={provider.id} initial={fav} />
+            <ShareButton title={`${p.displayName} — ${p.subName}`} path={`/provider/${p.slug}`} tgLink={tgLink} className="!bg-white/12 !border-transparent text-white" />
+            <FavoriteButton providerId={provider.id} initial={fav} className="!bg-white/12 !border-transparent text-white" />
           </div>
         </div>
-      </div>
-
-      <div className="px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10 lg:px-0">
-        <div className="min-w-0">
-          {/* Identity */}
-          <section className="relative -mt-20 lg:-mt-16 lg:pl-8">
-            <Avatar name={p.displayName} src={p.avatarUrl} size={112} ring className="shadow-float [--tw-ring-color:var(--bg)]" />
-            {provider.status !== "active" && (
-              <Badge tone="warning" className="ml-3 align-bottom">
-                {provider.status === "pending" ? "На проверке" : provider.status === "rejected" ? "Требует доработки" : "Приостановлен"}
-              </Badge>
+        <div className="relative mx-auto mt-2 flex max-w-[560px] items-center justify-center gap-5 px-4 sm:gap-10">
+          <div className="w-[86px] text-center">
+            <p className="num text-[30px]">{p.ordersCompleted.toLocaleString("ru-RU")}</p>
+            <p className="mt-1 text-[12.5px] text-white/55">{pl(p.ordersCompleted, ["заказ", "заказа", "заказов"]).replace(/^[\d\s]+/, "")}</p>
+          </div>
+          <span className="rounded-full p-[5px] ring-2 ring-white/85">
+            <Avatar name={p.displayName} src={p.avatarUrl} size={124} />
+          </span>
+          <div className="w-[86px] text-center">
+            <p className="num text-[30px]">{p.reviewsCount ? rating(p.ratingAvg) : "—"}</p>
+            <p className="mt-1 text-[12.5px] text-white/55">{pl(p.reviewsCount, ["отзыв", "отзыва", "отзывов"])}</p>
+          </div>
+        </div>
+        <div className="relative mt-5 px-6 text-center">
+          <h1 className="inline-flex flex-wrap items-center justify-center gap-2 text-[28px] font-semibold tracking-[-0.03em] md:text-[36px]">
+            {p.displayName}
+            <VerifiedMark level={p.verification} size={18} className="[&>span]:bg-white [&>span]:text-black" />
+          </h1>
+          <p className="mx-auto mt-1.5 max-w-md text-[15px] leading-snug text-white/60">{p.headline}</p>
+          {provider.status !== "active" && (
+            <Badge tone="warning" className="mt-3">
+              {provider.status === "pending" ? "На проверке" : provider.status === "rejected" ? "Требует доработки" : "Приостановлен"}
+            </Badge>
+          )}
+        </div>
+        {!isOwner && (
+          <div className="relative mx-auto mt-6 grid max-w-[420px] grid-cols-2 gap-2.5 px-5">
+            <MessageButton providerId={provider.id} variant="outline" className="h-12 rounded-full border-white/70 text-[15px] text-white hover:bg-white hover:text-black" />
+            {provider.phone && provider.showPhone ? (
+              <a href={`tel:${provider.phone.replace(/[^\d+]/g, "")}`} className={buttonClass({ variant: "outline", size: "sm", className: "h-12 border-white/70 text-[15px] text-white hover:bg-white hover:text-black" })}>
+                <Phone className="h-4 w-4" /> Позвонить
+              </a>
+            ) : (
+              <Link href={`/order/new?provider=${provider.id}`} className={buttonClass({ variant: "outline", size: "sm", className: "h-12 border-white/70 text-[15px] text-white hover:bg-white hover:text-black" })}>
+                Заказать
+              </Link>
             )}
-            <h1 className="display mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[34px] md:text-[46px]">
-              {p.displayName}
-              <VerifiedMark level={p.verification} size={20} />
-            </h1>
-            <p className="mt-2 text-[17px] leading-snug text-ink-2 md:text-[19px]">{p.headline}</p>
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13.5px] font-semibold shadow-soft">
+          </div>
+        )}
+      </section>
+
+      <div className="px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-10 lg:px-0">
+        <div className="min-w-0">
+          <section className="mt-5">
+            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+              <span className="inline-flex h-8 items-center gap-1.5 rounded-full bezel px-3 text-[13.5px] font-semibold">
                 <StatusDot online={p.isAvailable} /> {p.isAvailable ? "Свободен сейчас" : "Сейчас занят"}
               </span>
               {subs.map((s) => (
@@ -142,12 +173,12 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
           </section>
 
           {/* Stats bento */}
-          <section aria-label="Показатели" className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {stats.map((s, i) => (
-              <div key={s.label} className={cn("rounded-[22px] p-4", i === 0 ? "bg-ink text-bg" : "bg-surface shadow-soft")}>
+          <section aria-label="Показатели" className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {stats.slice(2).map((s, i) => (
+              <div key={s.label} className="bezel rounded-[24px] p-4">
                 <s.icon className={cn("h-5 w-5", i === 0 ? "text-accent" : "text-muted")} strokeWidth={1.9} />
-                <div className="mt-3 text-[28px] font-semibold leading-none tracking-[-0.04em] tabular">{s.value}</div>
-                <div className={cn("mt-1 text-[13px]", i === 0 ? "opacity-70" : "text-muted")}>{s.label}</div>
+                <div className="num mt-3 text-[34px]">{s.value}</div>
+                <div className="mt-1.5 text-[13px] text-muted">{s.label}</div>
               </div>
             ))}
           </section>
@@ -161,23 +192,12 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
 
           {services.length > 0 && (
             <section className="mt-10" aria-labelledby="svc">
-              <h2 id="svc" className="title text-[24px]">Услуги и цены</h2>
-              <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[24px] bg-surface shadow-card">
-                {services.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div className="min-w-0">
-                      <p className="text-[15.5px] font-semibold">{s.title}</p>
-                      {s.description && <p className="mt-0.5 text-[13.5px] text-muted">{s.description}</p>}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-[15.5px] font-semibold tabular">
-                        {s.priceTo ? `${s.priceFrom.toLocaleString("ru-RU")}–${rub(s.priceTo)}` : `от ${rub(s.priceFrom)}`}
-                      </p>
-                      <p className="text-[12.5px] text-muted">{s.unit}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <h2 id="svc" className="title mb-4 text-[24px]">Услуги и цены</h2>
+              <ServicePicker
+                providerId={provider.id}
+                popularId={services.length > 2 ? services[0].id : undefined}
+                services={services.map((s) => ({ id: s.id, title: s.title, description: s.description, priceFrom: s.priceFrom, priceTo: s.priceTo, unit: s.unit, serviceSlug: s.serviceId ? (catalog.serviceById.get(s.serviceId)?.slug ?? null) : null }))}
+              />
             </section>
           )}
 
@@ -196,7 +216,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
             <h2 id="rv" className="title text-[24px]">Отзывы</h2>
             {p.reviewsCount > 0 ? (
               <>
-                <div className="mt-4 grid gap-4 rounded-[24px] bg-surface p-5 shadow-card sm:grid-cols-[auto_1fr] sm:gap-8">
+                <div className="mt-4 grid gap-4 rounded-[24px] bezel p-5 sm:grid-cols-[auto_1fr] sm:gap-8">
                   <div>
                     <div className="text-[56px] font-semibold leading-none tracking-[-0.05em] tabular">{rating(p.ratingAvg)}</div>
                     <Stars value={p.ratingAvg} className="mt-2" />
@@ -216,7 +236,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
                 </div>
                 <ul className="mt-3 flex flex-col gap-3">
                   {reviews.slice(0, 5).map((r) => (
-                    <li key={r.id} className="rounded-[24px] bg-surface p-5 shadow-soft">
+                    <li key={r.id} className="rounded-[24px] bezel p-5">
                       <div className="flex items-center gap-3">
                         <Avatar name={r.authorName} src={r.authorAvatar} size={40} />
                         <div className="min-w-0 flex-1">
@@ -253,7 +273,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
                     <summary className="press flex h-12 cursor-pointer list-none items-center justify-center rounded-2xl bg-surface-2 text-[15px] font-semibold hover:bg-surface-3 group-open:hidden">Показать ещё {reviews.length - 5}</summary>
                     <ul className="flex flex-col gap-3">
                       {reviews.slice(5).map((r) => (
-                        <li key={r.id} className="rounded-[24px] bg-surface p-5 shadow-soft">
+                        <li key={r.id} className="rounded-[24px] bezel p-5">
                           <div className="flex items-center gap-3">
                             <Avatar name={r.authorName} src={r.authorAvatar} size={40} />
                             <div className="min-w-0 flex-1">
@@ -271,7 +291,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
                 )}
               </>
             ) : (
-              <p className="mt-3 rounded-[24px] bg-surface p-5 text-[15px] text-muted shadow-soft">Отзывов пока нет. Станьте первым клиентом — после выполнения заказа вы сможете оценить работу.</p>
+              <p className="mt-3 rounded-[24px] bezel p-5 text-[15px] text-muted">Отзывов пока нет. Станьте первым клиентом — после выполнения заказа вы сможете оценить работу.</p>
             )}
           </section>
 
@@ -295,7 +315,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
 
         {/* Desktop sticky action card */}
         <aside className="hidden lg:block">
-          <div className="sticky top-28 mt-8 rounded-[28px] bg-surface p-6 shadow-card">
+          <div className="sticky top-28 mt-8 rounded-[28px] bezel p-6">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">Стоимость</p>
             <p className="mt-1 text-[32px] font-semibold tracking-[-0.04em] tabular">{p.priceFrom != null ? `от ${rub(p.priceFrom)}` : "По договорённости"}</p>
             <div className="mt-3 flex items-center gap-2 text-[14px]">

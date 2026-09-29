@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, MessageSquareText, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, BadgeCheck, BriefcaseBusiness, ClipboardList, LayoutGrid, MessageSquareText, Radio, Sparkles, Zap } from "lucide-react";
+import { listClientOrders } from "@/server/services/orders";
+import { LiveOrder } from "@/components/domain/live-order";
 import { APP } from "@/config/app";
 import { getCurrentUser } from "@/server/auth/session";
 import { getCatalog, getCurrentCity } from "@/server/services/catalog";
 import { favoriteIds, listProviders, providerCounts } from "@/server/services/providers";
 import { getContent } from "@/server/services/account";
-import { AllServicesTile, CategoryTile } from "@/components/domain/category-tile";
+import { AllServicesTile, CategoryHero, CategoryTile } from "@/components/domain/category-tile";
 import { ProviderCard } from "@/components/domain/provider-card";
 import { SearchBox } from "@/components/domain/search-box";
 import { Rail } from "@/components/domain/rail";
@@ -28,13 +30,16 @@ export default async function HomePage() {
   ]);
   const popularServices = catalog.categories.flatMap((c) => c.subs.flatMap((s) => s.services.filter((v) => v.isPopular).map((v) => ({ ...v, icon: s.icon })))).slice(0, 14);
   const [first, ...rest] = catalog.categories;
+  const PRIORITY = ["responses", "in_progress", "assigned", "new"];
+  const live = user ? (await listClientOrders(user.id)).filter((o) => PRIORITY.includes(o.status)).sort((a, b) => PRIORITY.indexOf(a.status) - PRIORITY.indexOf(b.status))[0] : undefined;
   const urgent = content["home.urgent"];
 
   return (
-    <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 pb-32 lg:px-6 lg:pb-16">
+    <main className={`mx-auto w-full max-w-[1320px] flex-1 px-4 lg:px-6 lg:pb-16 ${live ? "pb-64" : "pb-32"}`}>
+      {live && <LiveOrder order={live} docked />}
       {/* Hero */}
       <section className="relative pt-4 lg:pt-14">
-        <div aria-hidden className="pointer-events-none absolute -top-24 right-[-10%] -z-0 h-[340px] w-[340px] rounded-full bg-accent opacity-35 blur-[100px] dark:opacity-15 lg:h-[520px] lg:w-[520px]" />
+        <div aria-hidden className="pointer-events-none absolute -top-24 right-0 -z-0 h-[340px] w-[340px] rounded-full bg-accent opacity-35 blur-[100px] dark:opacity-15 lg:h-[520px] lg:w-[520px]" />
         <div className="relative lg:grid lg:grid-cols-[1.25fr_1fr] lg:items-end lg:gap-16">
           <div>
             <p className="mb-3 inline-flex items-center gap-2 text-[14px] font-semibold text-ink-2">
@@ -44,7 +49,7 @@ export default async function HomePage() {
             <h1 className="display text-[44px] sm:text-[56px] lg:text-[84px]">
               Что нужно
               <br />
-              сделать?
+              <span className="text-muted">сделать?</span>
             </h1>
           </div>
           <p className="mt-3 max-w-md text-[15.5px] leading-relaxed text-ink-2 sm:text-[17px] lg:mb-3 lg:mt-0 lg:text-[19px]">
@@ -52,6 +57,20 @@ export default async function HomePage() {
           </p>
         </div>
         <SearchBox className="relative z-20 mt-6 lg:mt-10 lg:max-w-3xl" />
+        <nav aria-label="Быстрые действия" className="mt-4 grid grid-cols-3 gap-2.5 lg:max-w-3xl">
+          {[
+            { href: "/order/new?urgency=urgent", label: "Срочно", icon: Zap },
+            { href: "/search?available=1", label: "Свободны", icon: Radio },
+            { href: user ? "/orders" : "/services", label: user ? "Мои заказы" : "Каталог", icon: user ? ClipboardList : LayoutGrid },
+          ].map((a) => (
+            <Link key={a.href} href={a.href} className="press bezel flex aspect-[1.35] flex-col items-center justify-center gap-2 rounded-[24px] text-[14px] font-semibold sm:aspect-auto sm:h-[92px]">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-bg">
+                <a.icon className="h-4 w-4" strokeWidth={2.2} />
+              </span>
+              {a.label}
+            </Link>
+          ))}
+        </nav>
         <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0 lg:[&>*:nth-child(n+9)]:hidden">
           {popularServices.map((s) => (
             <Link key={s.id} href={`/order/new?service=${s.slug}`} className="press inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 text-[14px] font-medium hover:border-line-strong hover:bg-surface">
@@ -66,7 +85,7 @@ export default async function HomePage() {
       <section className="mt-10 lg:mt-16" aria-labelledby="cats">
         <SectionHeader as="h2" title={<span id="cats">Категории</span>} action={<Link href="/services" className="text-[15px] font-semibold text-ink-2 hover:text-ink">Все</Link>} />
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-3 lg:grid-cols-6">
-          {first && <CategoryTile c={first} count={counts.byCat.get(first.id)} size="lg" className="col-span-2 row-span-2 sm:col-span-1 lg:col-span-2" />}
+          {first && <CategoryHero c={first} count={counts.byCat.get(first.id)} className="col-span-2 row-span-2 sm:col-span-1 lg:col-span-2" />}
           {rest.map((c) => (
             <CategoryTile key={c.id} c={c} count={counts.byCat.get(c.id)} />
           ))}
@@ -123,7 +142,7 @@ export default async function HomePage() {
             { icon: Sparkles, t: "Получите отклики", d: "Специалисты рядом предложат цену и сроки — обычно за 10–15 минут." },
             { icon: BadgeCheck, t: "Выберите лучшего", d: "Сравните рейтинг, отзывы и портфолио. Договоритесь в чате." },
           ].map((s, i) => (
-            <li key={s.t} className="flex gap-4 rounded-[var(--radius-card)] bg-surface p-5 shadow-card md:flex-col md:p-6">
+            <li key={s.t} className="flex gap-4 rounded-[var(--radius-card)] bezel p-5 md:flex-col md:p-6">
               <span className="relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface-2">
                 <s.icon className="h-6 w-6" strokeWidth={1.8} />
                 <span className="absolute -right-1.5 -top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[12px] font-bold text-accent-ink">{i + 1}</span>
@@ -148,7 +167,7 @@ export default async function HomePage() {
 
       {/* Become provider */}
       <section className="mt-10 lg:mt-16">
-        <div className="grid overflow-hidden rounded-[32px] bg-surface shadow-card md:grid-cols-2">
+        <div className="grid overflow-hidden rounded-[32px] bezel md:grid-cols-2">
           <div className="p-6 md:p-10">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-accent-ink">
               <BriefcaseBusiness className="h-6 w-6" />

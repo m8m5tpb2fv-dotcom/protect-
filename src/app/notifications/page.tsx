@@ -38,7 +38,7 @@ export default async function NotificationsPage() {
           {items.map((n) => {
             const Icon = ICONS[n.type] ?? Bell;
             const inner = (
-              <div className={cn("flex gap-3 rounded-[22px] p-4", n.readAt ? "bg-surface/60" : "bg-surface shadow-card")}>
+              <div className={cn("flex gap-3 rounded-[22px] p-4", n.readAt ? "bg-surface/60" : "bezel")}>
                 <span className={cn("inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", n.readAt ? "bg-surface-2" : "bg-accent text-accent-ink")}>
                   <Icon className="h-5 w-5" />
                 </span>

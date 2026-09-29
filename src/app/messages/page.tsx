@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Сообщения", robots: { index
 
 export default function MessagesIndex() {
   return (
-    <div className="hidden h-[calc(100dvh-140px)] flex-col items-center justify-center rounded-[28px] bg-surface text-center shadow-card lg:flex">
+    <div className="hidden h-[calc(100dvh-140px)] flex-col items-center justify-center rounded-[28px] bezel text-center lg:flex">
       <span className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-surface-2">
         <MessageCircle className="h-7 w-7" />
       </span>

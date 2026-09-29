@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, randomBytes } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "../db";
 import { providers, sessions, users, type Provider, type User } from "../db/schema";
@@ -138,4 +139,19 @@ export async function requestMeta() {
     ip: (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "local").trim(),
     userAgent: h.get("user-agent"),
   };
+}
+
+/* Page-level guards: redirect instead of throwing (layouts and pages render in parallel). */
+export async function pageProvider(next = "/pro") {
+  const u = await getCurrentUser();
+  if (!u) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!u.provider) redirect("/become-provider");
+  return u as CurrentUser & { provider: NonNullable<CurrentUser["provider"]> };
+}
+
+export async function pageAdmin() {
+  const u = await getCurrentUser();
+  if (!u) redirect("/login?next=/admin");
+  if (u.role === "user") redirect("/");
+  return u;
 }

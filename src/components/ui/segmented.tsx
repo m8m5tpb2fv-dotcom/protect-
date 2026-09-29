@@ -12,7 +12,7 @@ export function Segmented({ items, value, onChange, className, size = "md" }: { 
         const cls = cn(
           "press inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-4 font-semibold",
           size === "sm" ? "h-8 text-[13px]" : "h-10 text-[14px]",
-          active ? "bg-surface text-ink shadow-soft" : "text-muted hover:text-ink",
+          active ? "bezel text-ink" : "text-muted hover:text-ink",
         );
         const inner = (
           <>

@@ -19,7 +19,7 @@ export function Documents({ docs, verification }: { docs: { id: string; kind: st
   const toast = useToast();
   const v = VERIFICATION[verification];
   return (
-    <section className="rounded-[28px] bg-surface p-5 shadow-card md:p-6">
+    <section className="rounded-[28px] bezel p-5 md:p-6">
       <h2 className="title text-[22px]">Проверка профиля</h2>
       <p className="mt-1 text-[14.5px] text-muted">
         Текущий статус: <b className="text-ink">{v ? v.label : "Обычный профиль"}</b>. Документы видят только модераторы, они хранятся в закрытом хранилище. Статус — это проверка платформы, а не юридическая гарантия.

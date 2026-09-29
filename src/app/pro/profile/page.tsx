@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireProvider } from "@/server/auth/session";
+import { pageProvider } from "@/server/auth/session";
 import { getOwnProvider } from "@/server/services/provider-self";
 import { providerFormData } from "@/server/services/form-data";
 import { ProviderForm, DEFAULT_SCHEDULE } from "@/components/domain/provider-form";
@@ -8,7 +8,7 @@ import { Documents } from "./documents";
 export const metadata: Metadata = { title: "Профиль исполнителя", robots: { index: false } };
 
 export default async function ProProfilePage() {
-  const user = await requireProvider();
+  const user = await pageProvider();
   const own = (await getOwnProvider(user))!;
   const p = own.provider;
   return (

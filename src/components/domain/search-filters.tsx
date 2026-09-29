@@ -54,7 +54,7 @@ export function SearchFilters({ districts }: { districts: { slug: string; name: 
 
   const district = sp.get("district") ?? "";
   const active = [sp.get("available"), sp.get("verified"), district, sp.get("sort")].filter(Boolean).length;
-  const chip = (on: boolean) => cn("press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold", on ? "bg-ink text-bg" : "bg-surface text-ink shadow-soft ring-1 ring-line hover:ring-line-strong");
+  const chip = (on: boolean) => cn("press inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold", on ? "bg-ink text-bg" : "bezel text-ink ring-1 ring-line hover:ring-line-strong");
 
   return (
     <div className={cn("-mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:mx-0 lg:px-0", pending && "opacity-70")}>

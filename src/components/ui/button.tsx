@@ -3,20 +3,21 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 const variants = {
-  primary: "bg-ink text-bg hover:bg-ink/90 shadow-soft",
-  accent: "bg-accent text-accent-ink hover:bg-accent-strong shadow-[0_8px_24px_-10px_color-mix(in_srgb,var(--accent)_70%,transparent)]",
+  primary: "btn-primary",
+  accent: "bg-accent text-accent-ink hover:bg-accent-strong glow",
   secondary: "bg-surface-2 text-ink hover:bg-surface-3",
-  surface: "bg-surface text-ink border border-line hover:border-line-strong shadow-soft",
+  surface: "bezel text-ink hover:border-line-strong",
   ghost: "text-ink hover:bg-surface-2",
   glass: "glass text-ink hover:bg-glass-strong",
   danger: "bg-danger-soft text-danger hover:bg-danger/15",
   outline: "border border-line-strong text-ink hover:bg-surface-2",
+  pill: "rounded-full border border-ink/70 text-ink hover:bg-ink hover:text-bg",
 } as const;
 
 const sizes = {
-  sm: "h-9 px-3.5 text-[13px] gap-1.5 rounded-xl",
-  md: "h-11 px-5 text-[15px] gap-2 rounded-2xl",
-  lg: "h-14 px-6 text-base gap-2.5 rounded-[20px]",
+  sm: "h-9 px-4 text-[13px] gap-1.5 rounded-full",
+  md: "h-11 px-5 text-[15px] gap-2 rounded-full",
+  lg: "h-14 px-7 text-base gap-2.5 rounded-full",
   icon: "h-11 w-11 rounded-full",
   "icon-sm": "h-9 w-9 rounded-full",
 } as const;

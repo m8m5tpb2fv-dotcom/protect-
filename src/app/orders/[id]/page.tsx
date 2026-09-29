@@ -68,7 +68,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
   const isDirectToMe = !!user.provider && o.directProviderId === user.provider.id;
 
   const details = (
-    <section className="rounded-[28px] bg-surface p-5 shadow-card md:p-6">
+    <section className="rounded-[28px] bezel p-5 md:p-6">
       <div className="flex items-start gap-3">
         {sub && (
           <span style={toneStyle(sub.tone)} className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--t-a)] text-[var(--t-ink)] dark:bg-[color-mix(in_srgb,var(--t-ink)_70%,#000)] dark:text-[var(--t-a)]">
@@ -166,7 +166,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
             </section>
           )}
           {role === "client" && !isOpen && responses.length > 1 && (
-            <details className="rounded-[24px] bg-surface p-4 shadow-soft">
+            <details className="rounded-[24px] bezel p-4">
               <summary className="cursor-pointer text-[15px] font-semibold">Все отклики ({responses.length})</summary>
               <div className="mt-3">
                 <ResponsesList orderId={o.id} responses={responses as ResponseItem[]} canChoose={false} />
@@ -186,7 +186,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
             </section>
           )}
 
-          <section className="rounded-[24px] bg-surface p-5 shadow-soft">
+          <section className="rounded-[24px] bezel p-5">
             <h2 className="mb-3 text-[15px] font-semibold">История</h2>
             <ol className="relative flex flex-col gap-3 border-l border-line pl-5">
               {events.map((e) => (
@@ -205,7 +205,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
         <aside className="mt-5 flex flex-col gap-4 lg:mt-0">
           <div className="flex flex-col gap-4 lg:sticky lg:top-28">
             {role === "client" && assigned && (
-              <section className="rounded-[28px] bg-surface p-5 shadow-card">
+              <section className="rounded-[28px] bezel p-5">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">Исполнитель</p>
                 <Link href={`/provider/${assigned.slug}`} className="mt-3 flex items-center gap-3">
                   <Avatar name={assigned.displayName} src={assigned.avatarUrl} size={52} />
@@ -230,7 +230,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
             )}
 
             {(role === "provider" || role === "prospect") && (
-              <section className="rounded-[28px] bg-surface p-5 shadow-card">
+              <section className="rounded-[28px] bezel p-5">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">Клиент</p>
                 <div className="mt-3 flex items-center gap-3">
                   <Avatar name={client.name} src={client.avatarUrl} size={48} />
@@ -254,7 +254,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
 
             {role === "prospect" && !myResponse && isOpen && <RespondForm orderId={o.id} budget={o.budget} />}
             {myResponse && (
-              <section className="rounded-[26px] bg-surface p-5 shadow-soft">
+              <section className="rounded-[26px] bezel p-5">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">Ваш отклик</p>
                 <p className="mt-2 text-[18px] font-semibold tabular">{myResponse.price != null ? rub(myResponse.price) : "Цена не указана"}</p>
                 <p className="mt-1 whitespace-pre-line text-[14.5px] text-ink-2">{myResponse.message}</p>
@@ -266,7 +266,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
 
             {role === "client" && o.status === "completed" && assigned && !review && <ReviewForm orderId={o.id} providerName={assigned.displayName} />}
             {review && (
-              <section className="rounded-[26px] bg-surface p-5 shadow-soft">
+              <section className="rounded-[26px] bezel p-5">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-muted">Отзыв клиента</p>
                 <Stars value={review.rating} className="mt-2" />
                 {review.text && <p className="mt-2 text-[15px] text-ink-2">{review.text}</p>}

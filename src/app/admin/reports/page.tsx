@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminReports } from "@/server/services/admin";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -10,7 +10,7 @@ import { providers, reviews } from "@/server/db/schema";
 import { inArray } from "drizzle-orm";
 
 export default async function AdminReports({ searchParams }: PageProps<"/admin/reports">) {
-  await requireAdmin();
+  await pageAdmin();
   const p = await searchParams;
   const status = sp(p.status) ?? "open";
   const page = Number(sp(p.page) ?? 1) || 1;

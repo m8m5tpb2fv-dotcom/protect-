@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminCategories } from "@/server/services/admin";
 import { AdminForm } from "@/components/admin/admin-form";
 import { AdminAction } from "@/components/admin/action-button";
@@ -7,14 +7,14 @@ import { CatalogIcon } from "@/components/ui/catalog-icon";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AdminCategories() {
-  const me = await requireAdmin();
+  const me = await pageAdmin();
   const cats = await adminCategories();
   const isAdmin = me.role === "admin";
   return (
     <AdminPage title="Категории" subtitle={`${cats.length} групп · ${cats.reduce((n, c) => n + c.subs.length, 0)} специализаций`}>
       <div className="grid gap-3 xl:grid-cols-2">
         {cats.map((c) => (
-          <section key={c.id} className="rounded-[22px] bg-surface p-5 shadow-card">
+          <section key={c.id} className="rounded-[22px] bezel p-5">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2">
                 <CatalogIcon name={c.icon} className="h-5 w-5" />

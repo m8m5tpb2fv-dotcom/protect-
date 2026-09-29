@@ -63,7 +63,7 @@ export function Onboarding() {
             </span>
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
           </button>
-          <button onClick={() => close("/become-provider")} className="press lift group flex items-center gap-4 rounded-[26px] bg-surface p-5 text-left shadow-card">
+          <button onClick={() => close("/become-provider")} className="press lift group flex items-center gap-4 rounded-[26px] bezel p-5 text-left">
             <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface-2">
               <BriefcaseBusiness className="h-6 w-6" />
             </span>

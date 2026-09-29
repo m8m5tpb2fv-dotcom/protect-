@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminReviews } from "@/server/services/admin";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -8,7 +8,7 @@ import { Stars } from "@/components/ui/rating";
 import { dateShort } from "@/lib/format";
 
 export default async function AdminReviews({ searchParams }: PageProps<"/admin/reviews">) {
-  await requireAdmin();
+  await pageAdmin();
   const p = await searchParams;
   const q = sp(p.q);
   const status = sp(p.status);

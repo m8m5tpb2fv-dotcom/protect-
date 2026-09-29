@@ -31,7 +31,7 @@ export function ConversationList({ initial }: { initial: Conv[] }) {
         <ul className="flex flex-col gap-1.5">
           {items.map((c) => (
             <li key={c.id}>
-              <Link href={`/messages/${c.id}`} aria-current={activeId === c.id ? "page" : undefined} className={cn("press flex items-center gap-3 rounded-[22px] p-3", activeId === c.id ? "bg-surface shadow-card" : "hover:bg-surface/70")}>
+              <Link href={`/messages/${c.id}`} aria-current={activeId === c.id ? "page" : undefined} className={cn("press flex items-center gap-3 rounded-[22px] p-3", activeId === c.id ? "bezel" : "hover:bg-surface/70")}>
                 <Avatar name={c.peerName} src={c.peerAvatar} size={52} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">

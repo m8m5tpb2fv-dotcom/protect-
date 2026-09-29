@@ -21,7 +21,7 @@ export default async function ServicesPage() {
       <SearchBox size="md" className="relative z-20 mt-6 lg:max-w-2xl" />
       <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {catalog.categories.map((c) => (
-          <section key={c.id} className="rounded-[var(--radius-card)] bg-surface p-2 shadow-card">
+          <section key={c.id} className="rounded-[var(--radius-card)] bezel p-2">
             <Link href={`/services/${c.slug}`} style={toneStyle(c.tone)} className="press flex items-center gap-3 rounded-[22px] bg-[var(--t-a)] p-4 text-[var(--t-ink)] dark:bg-[color-mix(in_srgb,var(--t-ink)_70%,#000)] dark:text-[var(--t-a)]">
               <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/60 dark:bg-white/10">
                 <CatalogIcon name={c.icon} className="h-5 w-5" />

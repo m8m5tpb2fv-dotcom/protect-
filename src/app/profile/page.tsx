@@ -26,7 +26,7 @@ export default async function ProfilePage() {
   ];
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-32 lg:pt-8">
-      <section className="flex items-center gap-4 rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="flex items-center gap-4 rounded-[28px] bezel p-5">
         <Avatar name={user.name} src={user.avatarUrl} size={72} />
         <div className="min-w-0 flex-1">
           <h1 className="title truncate text-[24px]">{user.name}</h1>
@@ -62,7 +62,7 @@ export default async function ProfilePage() {
         </Link>
       )}
 
-      <nav className="mt-3 rounded-[28px] bg-surface p-2 shadow-card" aria-label="Меню профиля">
+      <nav className="mt-3 rounded-[28px] bezel p-2" aria-label="Меню профиля">
         {items.map((it) => (
           <Link key={it.href} href={it.href} className="press flex min-h-14 items-center gap-3 rounded-2xl px-4 text-[15px] font-medium hover:bg-surface-2">
             <it.icon className="h-5 w-5 text-ink-2" />
@@ -73,7 +73,7 @@ export default async function ProfilePage() {
         <LogoutButton />
       </nav>
 
-      <section className="mt-3 rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="mt-3 rounded-[28px] bezel p-5">
         <h2 className="mb-3 text-[15px] font-semibold">Оформление</h2>
         <ThemeSwitch />
       </section>

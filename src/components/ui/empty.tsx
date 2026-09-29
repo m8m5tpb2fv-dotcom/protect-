@@ -32,5 +32,5 @@ export function SectionHeader({ title, subtitle, action, className, as: As = "h2
 }
 
 export function Card({ className, children, as: As = "div" }: { className?: string; children: ReactNode; as?: "div" | "section" | "article" | "li" }) {
-  return <As className={cn("rounded-[var(--radius-card)] bg-surface p-5 shadow-card md:p-6", className)}>{children}</As>;
+  return <As className={cn("bezel rounded-[var(--radius-card)] p-5 md:p-6", className)}>{children}</As>;
 }

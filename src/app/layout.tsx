@@ -31,17 +31,17 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f3ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: light)", color: "#000000" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 
 /** Runs before paint: resolves system theme and detects Telegram Mini App launch. */
-const BOOT = `(function(){try{var d=document.documentElement;var p=d.getAttribute('data-theme-pref');if(!p||p==='system'){d.setAttribute('data-theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}var tg=location.hash.indexOf('tgWebAppData')>-1||sessionStorage.getItem('ryadom_tg')==='1';if(tg){sessionStorage.setItem('ryadom_tg','1');d.setAttribute('data-tg','1');var s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js?59';s.async=false;document.head.appendChild(s)}}catch(e){}})();`;
+const BOOT = `(function(){try{var d=document.documentElement;var p=d.getAttribute('data-theme-pref');if(p==='system'){d.setAttribute('data-theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}var tg=location.hash.indexOf('tgWebAppData')>-1||sessionStorage.getItem('ryadom_tg')==='1';if(tg){sessionStorage.setItem('ryadom_tg','1');d.setAttribute('data-tg','1');var s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js?59';s.async=false;document.head.appendChild(s)}}catch(e){}})();`;
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const jar = await cookies();
-  const pref = jar.get("ryadom_theme")?.value ?? "system";
+  const pref = jar.get("ryadom_theme")?.value ?? "dark"; // dark-first, as in the visual references
   const [user, city] = await Promise.all([getCurrentUser(), getCurrentCity()]);
   const counts = user ? await summary(user) : { unreadNotifications: 0, unreadMessages: 0 };
   const onboarded = jar.get("ryadom_onboarded")?.value === "1";

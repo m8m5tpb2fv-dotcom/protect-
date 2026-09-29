@@ -27,7 +27,7 @@ export default async function BecomeProviderPage() {
       <p className="mt-3 text-[17px] text-ink-2">Заполните профиль за 3 минуты — и начните получать заказы от клиентов {`в Саратове`}.</p>
       <ul className="mt-6 grid grid-cols-2 gap-2.5">
         {perks.map((p) => (
-          <li key={p.t} className="rounded-[22px] bg-surface p-4 shadow-soft">
+          <li key={p.t} className="rounded-[22px] bezel p-4">
             <p.icon className="h-5 w-5" />
             <p className="mt-3 text-[15px] font-semibold">{p.t}</p>
             <p className="mt-1 text-[13px] leading-snug text-muted">{p.d}</p>

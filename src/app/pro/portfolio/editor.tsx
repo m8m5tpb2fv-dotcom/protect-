@@ -34,7 +34,7 @@ export function PortfolioEditor({ items }: { items: Item[] }) {
   };
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 rounded-[28px] bg-surface p-5 shadow-card sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-[28px] bezel p-5 sm:flex-row sm:items-center">
         <div className="flex-1">
           <h2 className="title text-[22px]">Портфолио</h2>
           <p className="text-[14px] text-muted">Фото JPG/PNG/HEIC до 12 МБ и видео MP4/WebM до 60 МБ. Метаданные (в т.ч. геолокация) удаляются автоматически.</p>

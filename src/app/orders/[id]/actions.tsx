@@ -65,7 +65,7 @@ export function ResponsesList({ orderId, responses, canChoose }: { orderId: stri
     <>
       <ul className="flex flex-col gap-3">
         {responses.map((r) => (
-          <li key={r.id} className={cn("rounded-[26px] bg-surface p-4 shadow-card", r.status === "accepted" && "ring-2 ring-accent", r.status === "declined" && "opacity-60")}>
+          <li key={r.id} className={cn("rounded-[26px] bezel p-4", r.status === "accepted" && "ring-2 ring-accent", r.status === "declined" && "opacity-60")}>
             <div className="flex items-start gap-3">
               <Link href={`/provider/${r.providerSlug}`}>
                 <Avatar name={r.providerName} src={r.providerAvatar} size={52} />
@@ -141,7 +141,7 @@ export function RespondForm({ orderId, budget }: { orderId: string; budget: numb
   const { haptic } = useTelegram();
   return (
     <form
-      className="flex flex-col gap-3 rounded-[26px] bg-surface p-5 shadow-card"
+      className="flex flex-col gap-3 rounded-[26px] bezel p-5"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);

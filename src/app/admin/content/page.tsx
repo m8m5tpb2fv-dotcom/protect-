@@ -1,16 +1,16 @@
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { allContent } from "@/server/services/account";
 import { AdminForm } from "@/components/admin/admin-form";
 import { AdminPage } from "@/components/admin/table";
 
 export default async function AdminContent() {
-  const me = await requireAdmin();
+  const me = await pageAdmin();
   const blocks = await allContent();
   return (
     <AdminPage title="Контент" subtitle="Тексты на главной и FAQ поддержки">
       <div className="flex flex-col gap-3">
         {blocks.map((b) => (
-          <section key={b.key} className="rounded-[22px] bg-surface p-5 shadow-card">
+          <section key={b.key} className="rounded-[22px] bezel p-5">
             <p className="mb-3 font-mono text-[12.5px] text-muted">{b.key}</p>
             {me.role === "admin" ? (
               <AdminForm

@@ -17,7 +17,7 @@ export default async function SupportPage() {
       <PageHeader title="Поддержка" />
       <section className="flex flex-col gap-2">
         {faq.map((f) => (
-          <details key={f.key} className="group rounded-[22px] bg-surface p-5 shadow-soft">
+          <details key={f.key} className="group rounded-[22px] bezel p-5">
             <summary className="cursor-pointer list-none text-[16px] font-semibold marker:hidden">{f.title}</summary>
             <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{f.body}</p>
           </details>
@@ -29,7 +29,7 @@ export default async function SupportPage() {
           <h2 className="title mb-3 text-[20px]">Мои обращения</h2>
           <ul className="flex flex-col gap-2">
             {tickets.map((t) => (
-              <li key={t.id} className="rounded-[22px] bg-surface p-4 shadow-soft">
+              <li key={t.id} className="rounded-[22px] bezel p-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-semibold">{t.subject}</p>
                   <Badge tone={t.status === "open" ? "warning" : "success"}>{t.status === "open" ? "В работе" : t.status === "answered" ? "Есть ответ" : "Закрыто"}</Badge>

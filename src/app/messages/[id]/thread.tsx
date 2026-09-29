@@ -86,7 +86,7 @@ export function ChatThread({ conversationId, me, peer, order, asRole, initial }:
 
   const days = msgs.map((m) => dateShort(m.createdAt));
   return (
-    <section className="fixed inset-0 z-50 flex flex-col bg-bg lg:static lg:z-auto lg:h-[calc(100dvh-140px)] lg:overflow-hidden lg:rounded-[28px] lg:bg-surface lg:shadow-card">
+    <section className="fixed inset-0 z-50 flex flex-col bg-bg lg:static lg:z-auto lg:h-[calc(100dvh-140px)] lg:overflow-hidden lg:rounded-[28px] lg:bezel lg:">
       <header className="glass flex items-center gap-3 border-x-0 border-t-0 px-3 pb-2.5 pt-[calc(var(--safe-top)+8px)] lg:bg-surface lg:pt-3">
         {!isTelegram && (
           <button onClick={() => router.push("/messages")} className="press inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-surface-2 lg:hidden" aria-label="Назад к диалогам">

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, Inbox, MapPin, Star, Trophy, Wallet } from "lucide-react";
 import { eq } from "drizzle-orm";
-import { requireProvider } from "@/server/auth/session";
+import { pageProvider } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { providers } from "@/server/db/schema";
 import { providerFeed, providerOrders } from "@/server/services/orders";
@@ -20,7 +20,7 @@ import { AvailabilityToggle } from "./availability-toggle";
 export const metadata: Metadata = { title: "Кабинет исполнителя", robots: { index: false } };
 
 export default async function ProHome({ searchParams }: PageProps<"/pro">) {
-  const user = await requireProvider();
+  const user = await pageProvider();
   const sp = await searchParams;
   const [[p], feed, mine] = await Promise.all([db.select().from(providers).where(eq(providers.id, user.provider.id)), providerFeed(user.provider.id), providerOrders(user.provider.id)]);
   const active = mine.filter((o) => o.status === "assigned" || o.status === "in_progress");
@@ -67,7 +67,7 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
       {p.status === "suspended" && <div className="rounded-[24px] bg-danger-soft p-4 text-[14.5px] text-danger">Профиль приостановлен модератором. Напишите в поддержку.</div>}
 
       <div className="grid gap-3 lg:grid-cols-[1fr_1.4fr]">
-        <section className="rounded-[28px] bg-surface p-5 shadow-card">
+        <section className="rounded-[28px] bezel p-5">
           <AvailabilityToggle initial={p.isAvailable} disabled={p.status !== "active"} />
           <div className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-[13.5px]">
             {isPro ? <Badge tone="accent">Pro до {p.proUntil!.toLocaleDateString("ru-RU")}</Badge> : <Link href="/pro/billing" className="font-semibold underline">Подключить Pro</Link>}
@@ -76,10 +76,10 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
         </section>
         <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {stats.map((s, i) => (
-            <div key={s.l} className={cn("rounded-[22px] p-4", i === 0 ? "bg-ink text-bg" : "bg-surface shadow-soft")}>
+            <div key={s.l} className={cn("bezel rounded-[24px] p-4", i === 0 && "glow")}>
               <s.icon className={cn("h-5 w-5", i === 0 ? "text-accent" : "text-muted")} />
-              <p className="mt-3 text-[24px] font-semibold leading-none tracking-[-0.04em] tabular">{s.v}</p>
-              <p className={cn("mt-1 text-[12.5px]", i === 0 ? "opacity-70" : "text-muted")}>{s.l}</p>
+              <p className="num mt-3 text-[30px]">{s.v}</p>
+              <p className={cn("mt-1 text-[12.5px]", "text-muted")}>{s.l}</p>
             </div>
           ))}
         </section>
@@ -109,7 +109,7 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
           <ul className="grid gap-3 md:grid-cols-2">
             {feed.map((o) => (
               <li key={o.id}>
-                <Link href={`/orders/${o.id}`} className={cn("press lift flex h-full flex-col rounded-[26px] bg-surface p-4 shadow-card", o.isDirect && "ring-2 ring-accent")}>
+                <Link href={`/orders/${o.id}`} className={cn("press lift flex h-full flex-col rounded-[26px] bezel p-4", o.isDirect && "ring-2 ring-accent")}>
                   <div className="flex items-start gap-3">
                     <span style={toneStyle(o.tone)} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--t-a)] text-[var(--t-ink)] dark:bg-[color-mix(in_srgb,var(--t-ink)_70%,#000)] dark:text-[var(--t-a)]">
                       <CatalogIcon name={o.icon} className="h-5 w-5" />

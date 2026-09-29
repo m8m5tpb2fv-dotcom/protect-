@@ -251,7 +251,7 @@ export function OrderWizard({
       </div>
 
       {provider && (
-        <div className="mt-2 flex items-center gap-3 rounded-[22px] bg-surface p-3 shadow-soft">
+        <div className="mt-2 flex items-center gap-3 rounded-[22px] bezel p-3">
           <Avatar name={provider.displayName} src={provider.avatarUrl} size={44} />
           <div className="min-w-0 flex-1">
             <p className="text-[12.5px] text-muted">Заявка напрямую исполнителю</p>
@@ -273,7 +273,7 @@ export function OrderWizard({
                 autoFocus
                 placeholder="Например: сантехник, уборка, репетитор"
                 aria-label="Поиск услуги"
-                className="h-14 w-full rounded-[20px] bg-surface pl-12 pr-4 text-[16px] shadow-card outline-none ring-1 ring-line focus:ring-2 focus:ring-ink"
+                className="h-14 w-full rounded-[20px] bezel pl-12 pr-4 text-[16px] outline-none ring-1 ring-line focus:ring-2 focus:ring-ink"
               />
             </div>
             {filteredSubs ? (
@@ -281,7 +281,7 @@ export function OrderWizard({
                 {filteredSubs.length === 0 && <li className="rounded-2xl bg-surface p-4 text-[15px] text-muted">Ничего не нашли. Выберите категорию ниже.</li>}
                 {filteredSubs.map((s) => (
                   <li key={s.id}>
-                    <button onClick={() => (set({ subId: s.id, serviceId: null }), go("task"))} className="press flex min-h-14 w-full items-center gap-3 rounded-[20px] bg-surface px-4 text-left shadow-soft hover:shadow-card">
+                    <button onClick={() => (set({ subId: s.id, serviceId: null }), go("task"))} className="press flex min-h-14 w-full items-center gap-3 rounded-[20px] bezel px-4 text-left hover:border-line-strong">
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2">
                         <CatalogIcon name={s.icon} className="h-5 w-5" />
                       </span>
@@ -303,7 +303,7 @@ export function OrderWizard({
                     </h2>
                     <div className="flex flex-wrap gap-2">
                       {c.subs.map((s) => (
-                        <button key={s.id} onClick={() => (set({ subId: s.id, serviceId: null }), go("task"))} className="press inline-flex h-11 items-center gap-2 rounded-full bg-surface px-4 text-[14.5px] font-medium shadow-soft ring-1 ring-line hover:ring-line-strong">
+                        <button key={s.id} onClick={() => (set({ subId: s.id, serviceId: null }), go("task"))} className="press inline-flex h-11 items-center gap-2 rounded-full bezel px-4 text-[14.5px] font-medium ring-1 ring-line hover:ring-line-strong">
                           <CatalogIcon name={s.icon} className="h-4 w-4 text-ink-2" />
                           {s.name}
                         </button>
@@ -333,22 +333,25 @@ export function OrderWizard({
                       set({ serviceId: v.id, title: v.name });
                       setTimeout(() => go("details"), 120);
                     }}
-                    className={cn("press flex min-h-[60px] items-center gap-3 rounded-[20px] px-4 text-left", on ? "bg-ink text-bg" : "bg-surface shadow-soft hover:shadow-card")}
+                    role="radio"
+                    aria-checked={on}
+                    className={cn("press flex min-h-[64px] items-center gap-3.5 rounded-[22px] border-2 px-4 text-left transition-colors", on ? "border-ink bg-surface" : "border-transparent bg-surface/70 hover:bg-surface")}
                   >
-                    <span className="flex-1">
-                      <span className="block text-[15.5px] font-semibold">{v.name}</span>
-                      {price != null && (
-                        <span className={cn("block text-[13px]", on ? "opacity-70" : "text-muted")}>
-                          от {rub(price)} {v.unit}
-                        </span>
-                      )}
+                    <span className={cn("inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2", on ? "border-ink" : "border-line-strong")} aria-hidden>
+                      {on && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
                     </span>
-                    {on ? <Check className="h-5 w-5" /> : <ChevronRight className="h-5 w-5 text-muted" />}
+                    <span className="flex-1 text-[16px] font-medium">{v.name}</span>
+                    {price != null && (
+                      <span className="shrink-0 text-right">
+                        <span className="block text-[17px] font-light tracking-[-0.03em] tabular">от {price.toLocaleString("ru-RU")} ₽</span>
+                        <span className="block text-[12px] text-muted">{v.unit}</span>
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
-            <div className="mt-5 rounded-[22px] bg-surface p-4 shadow-soft">
+            <div className="mt-5 rounded-[22px] bezel p-4">
               <Input label="Другое — опишите одной фразой" placeholder="Например: заменить радиатор" value={d.serviceId ? "" : d.title} onChange={(e) => set({ title: e.target.value, serviceId: null })} error={errors.title} maxLength={120} />
               <Button className="mt-3" block onClick={() => (d.title.trim().length >= 3 ? go("details") : setErrors({ title: "Коротко назовите задачу" }))}>
                 Продолжить
@@ -406,7 +409,7 @@ export function OrderWizard({
           <section>
             <h1 className="display text-[34px] md:text-[44px]">Где?</h1>
             <p className="mt-2 text-[15px] text-muted">Точный адрес увидит только выбранный исполнитель.</p>
-            <button onClick={locate} disabled={locating} className="press mt-5 flex min-h-14 w-full items-center gap-3 rounded-[20px] bg-surface px-4 text-left shadow-soft hover:shadow-card">
+            <button onClick={locate} disabled={locating} className="press mt-5 flex min-h-14 w-full items-center gap-3 rounded-[20px] bezel px-4 text-left hover:border-line-strong">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-info-soft text-info">{locating ? <Spinner /> : <LocateFixed className="h-5 w-5" />}</span>
               <span className="flex-1">
                 <span className="block text-[15px] font-semibold">{d.lat ? "Местоположение определено" : "Использовать моё местоположение"}</span>
@@ -418,7 +421,7 @@ export function OrderWizard({
             <p className="mb-2 mt-5 px-1 text-[13px] font-semibold text-ink-2">Район</p>
             <div className="flex flex-wrap gap-2">
               {districts.map((x) => (
-                <button key={x.id} onClick={() => set({ districtId: d.districtId === x.id ? null : x.id })} className={cn("press h-11 rounded-full px-4 text-[14.5px] font-semibold", d.districtId === x.id ? "bg-ink text-bg" : "bg-surface shadow-soft ring-1 ring-line")} aria-pressed={d.districtId === x.id}>
+                <button key={x.id} onClick={() => set({ districtId: d.districtId === x.id ? null : x.id })} className={cn("press h-11 rounded-full px-4 text-[14.5px] font-semibold", d.districtId === x.id ? "bg-ink text-bg" : "bezel ring-1 ring-line")} aria-pressed={d.districtId === x.id}>
                   {x.name}
                 </button>
               ))}
@@ -434,7 +437,7 @@ export function OrderWizard({
                 const Icon = URGENCY_ICON[u];
                 const on = d.urgency === u;
                 return (
-                  <button key={u} onClick={() => (set({ urgency: u }), haptic("select"))} aria-pressed={on} className={cn("press flex min-h-[120px] flex-col justify-between rounded-[24px] p-4 text-left", on ? "bg-ink text-bg shadow-float" : "bg-surface shadow-soft hover:shadow-card")}>
+                  <button key={u} onClick={() => (set({ urgency: u }), haptic("select"))} aria-pressed={on} className={cn("press flex min-h-[120px] flex-col justify-between rounded-[24px] p-4 text-left", on ? "bg-ink text-bg shadow-float" : "bezel hover:border-line-strong")}>
                     <span className={cn("inline-flex h-10 w-10 items-center justify-center rounded-xl", on ? "bg-accent text-accent-ink" : "bg-surface-2")}>
                       <Icon className="h-5 w-5" />
                     </span>
@@ -454,7 +457,7 @@ export function OrderWizard({
         {step === "review" && (
           <section>
             <h1 className="display text-[34px] md:text-[44px]">Проверьте заявку</h1>
-            <dl className="mt-5 divide-y divide-line overflow-hidden rounded-[24px] bg-surface shadow-card">
+            <dl className="mt-5 divide-y divide-line overflow-hidden rounded-[24px] bezel">
               {[
                 { k: "Услуга", v: `${sub?.name ?? ""} · ${d.title}`, s: "task" as Step },
                 { k: "Описание", v: d.description, s: "details" as Step },

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminGeo } from "@/server/services/admin";
 import { AdminForm } from "@/components/admin/admin-form";
 import { AdminAction } from "@/components/admin/action-button";
@@ -6,14 +6,14 @@ import { AdminPage } from "@/components/admin/table";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AdminGeo() {
-  const me = await requireAdmin();
+  const me = await pageAdmin();
   const cities = await adminGeo();
   const isAdmin = me.role === "admin";
   return (
     <AdminPage title="Города и районы" subtitle="Город — отдельная сущность: новые города подключаются без изменения кода">
       <div className="flex flex-col gap-3">
         {cities.map((c) => (
-          <section key={c.id} className="rounded-[22px] bg-surface p-5 shadow-card">
+          <section key={c.id} className="rounded-[22px] bezel p-5">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-[18px] font-semibold">{c.name}</h2>
               <span className="text-[13px] text-muted">{c.region}</span>

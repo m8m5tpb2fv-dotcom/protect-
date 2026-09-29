@@ -112,7 +112,7 @@ export function ProviderForm({ mode, initial, catalog, districts }: { mode: "cre
   };
 
   const show = (s: number) => mode === "edit" || step === s;
-  const section = "rounded-[28px] bg-surface p-5 shadow-card md:p-6";
+  const section = "rounded-[28px] bezel p-5 md:p-6";
 
   return (
     <div className="flex flex-col gap-4">

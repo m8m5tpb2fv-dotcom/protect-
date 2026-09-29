@@ -19,15 +19,15 @@ export function BottomNav() {
   const items = [NAV.home, second, null, NAV.messages, NAV.profile] as const;
 
   return (
-    <nav aria-label="Основная навигация" className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(10px,var(--safe-bottom))] lg:hidden">
-      <div className="glass mx-auto flex h-[66px] max-w-[520px] items-center justify-between rounded-[26px] px-2 shadow-float">
+    <nav aria-label="Основная навигация" className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(12px,var(--safe-bottom))] lg:hidden">
+      <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0b0b0c]/85 p-1.5 shadow-[0_18px_40px_-12px_rgb(0_0_0/0.7),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-2xl">
         {items.map((it, i) =>
           it === null ? (
             <Link
               key="create"
               href="/order/new"
               onClick={() => haptic("medium")}
-              className="press -mt-0.5 inline-flex h-[50px] w-[58px] items-center justify-center rounded-[20px] bg-accent text-accent-ink shadow-[0_10px_24px_-10px_color-mix(in_srgb,var(--accent)_90%,transparent)]"
+              className="press glow mx-1 inline-flex h-[52px] w-[52px] items-center justify-center rounded-full bg-accent text-accent-ink"
               aria-label="Создать заявку"
             >
               <Plus className="h-6 w-6" strokeWidth={2.4} />
@@ -37,13 +37,17 @@ export function BottomNav() {
               key={it.href + i}
               href={it.href}
               onClick={() => haptic("select")}
+              aria-label={it.label}
+              title={it.label}
               aria-current={isActive(pathname, it.href) ? "page" : undefined}
-              className={cn("press relative flex h-[54px] min-w-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl text-[10.5px] font-semibold", isActive(pathname, it.href) ? "text-ink" : "text-muted")}
+              className={cn(
+                "press relative inline-flex h-[52px] w-[52px] items-center justify-center rounded-full transition-colors",
+                isActive(pathname, it.href) ? "bg-white text-black" : "bg-white/[0.07] text-white/70 hover:text-white",
+              )}
             >
-              <it.icon className="h-[22px] w-[22px]" strokeWidth={isActive(pathname, it.href) ? 2.3 : 1.8} aria-hidden />
-              {it.label}
+              <it.icon className="h-[21px] w-[21px]" strokeWidth={isActive(pathname, it.href) ? 2.3 : 1.9} aria-hidden />
               {it.href === "/messages" && counts.unreadMessages > 0 && (
-                <span className="absolute right-[calc(50%-20px)] top-1.5 min-w-[18px] rounded-full bg-accent px-1 text-center text-[10px] leading-[18px] text-accent-ink tabular">{counts.unreadMessages > 99 ? "99+" : counts.unreadMessages}</span>
+                <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-accent px-1 text-center text-[10px] font-bold leading-[18px] text-accent-ink tabular">{counts.unreadMessages > 99 ? "99+" : counts.unreadMessages}</span>
               )}
             </Link>
           ),

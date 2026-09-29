@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminUsers } from "@/server/services/admin";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -8,7 +8,7 @@ import { dateShort } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 
 export default async function AdminUsers({ searchParams }: PageProps<"/admin/users">) {
-  const me = await requireAdmin();
+  const me = await pageAdmin();
   const p = await searchParams;
   const q = sp(p.q);
   const page = Number(sp(p.page) ?? 1) || 1;

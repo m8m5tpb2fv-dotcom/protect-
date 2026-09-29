@@ -19,7 +19,7 @@ export default async function SettingsPage() {
         user={{ name: user.name, avatarUrl: user.avatarUrl, districtId: user.districtId, notifyEmail: user.notifyEmail, notifyTelegram: user.notifyTelegram, email: user.email, phone: user.phone, telegramUsername: user.telegramUsername, hasTelegram: !!user.telegramId }}
         districts={city.districts.map((d) => ({ id: d.id, name: d.name }))}
       />
-      <section className="mt-3 rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="mt-3 rounded-[28px] bezel p-5">
         <h2 className="mb-3 text-[15px] font-semibold">Оформление</h2>
         <ThemeSwitch />
       </section>

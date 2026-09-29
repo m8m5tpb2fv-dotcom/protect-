@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminPayments } from "@/server/services/admin";
 import { gateway } from "@/server/payments";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { dateShort, rub } from "@/lib/format";
 
 export default async function AdminPayments({ searchParams }: PageProps<"/admin/payments">) {
-  await requireAdmin();
+  await pageAdmin();
   const p = await searchParams;
   const status = sp(p.status);
   const page = Number(sp(p.page) ?? 1) || 1;

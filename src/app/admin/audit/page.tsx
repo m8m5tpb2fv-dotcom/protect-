@@ -1,11 +1,11 @@
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminAudit } from "@/server/services/admin";
 import { AdminPage, sp, Table } from "@/components/admin/table";
 import { dateShort, time } from "@/lib/format";
 import Link from "next/link";
 
 export default async function AdminAudit({ searchParams }: PageProps<"/admin/audit">) {
-  await requireAdmin();
+  await pageAdmin();
   const page = Number(sp((await searchParams).page) ?? 1) || 1;
   const data = await adminAudit(page);
   return (

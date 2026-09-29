@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { desc, eq } from "drizzle-orm";
-import { requireProvider } from "@/server/auth/session";
+import { pageProvider } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { payments, providers } from "@/server/db/schema";
 import { gateway } from "@/server/payments";
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Продвижение и Pro", robo
 const STATUS = { pending: ["Ожидает", "warning"], succeeded: ["Оплачен", "success"], failed: ["Ошибка", "danger"], cancelled: ["Отменён", "neutral"], refunded: ["Возврат", "neutral"] } as const;
 
 export default async function BillingPage({ searchParams }: PageProps<"/pro/billing">) {
-  const user = await requireProvider();
+  const user = await pageProvider();
   const sp = await searchParams;
   const [[p], history] = await Promise.all([db.select().from(providers).where(eq(providers.id, user.provider.id)), db.select().from(payments).where(eq(payments.providerId, user.provider.id)).orderBy(desc(payments.createdAt)).limit(30)]);
   const gw = gateway();
@@ -40,7 +40,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/pro/bill
       )}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {products.map((pr) => (
-          <section key={pr.id} className={`flex flex-col rounded-[28px] p-5 ${pr.kind === "plan" ? "bg-ink text-bg md:col-span-2 xl:col-span-1" : "bg-surface shadow-card"}`}>
+          <section key={pr.id} className={`flex flex-col rounded-[28px] p-5 ${pr.kind === "plan" ? "bg-ink text-bg md:col-span-2 xl:col-span-1" : "bezel"}`}>
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[18px] font-semibold tracking-[-0.02em]">{pr.title}</h2>
               {pr.active && <Badge tone="accent">Активно</Badge>}
@@ -55,7 +55,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/pro/bill
           </section>
         ))}
       </div>
-      <section className="rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="rounded-[28px] bezel p-5">
         <h2 className="title text-[20px]">Комиссия</h2>
         <p className="mt-1 text-[14.5px] text-muted">
           Платформа удерживает {Math.round(APP.commissionRate * 100)}% с выполненных заказов. Начислено к оплате: <b className="text-ink">{rub(Math.max(0, -p.balance))}</b>. Оплата комиссии будет доступна после подключения платёжного шлюза.
@@ -66,7 +66,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/pro/bill
         {history.length === 0 ? (
           <p className="text-[14.5px] text-muted">Платежей пока не было.</p>
         ) : (
-          <ul className="divide-y divide-line overflow-hidden rounded-[24px] bg-surface shadow-card">
+          <ul className="divide-y divide-line overflow-hidden rounded-[24px] bezel">
             {history.map((h) => {
               const s = STATUS[h.status];
               return (

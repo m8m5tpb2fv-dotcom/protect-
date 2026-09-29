@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { adminOrders } from "@/server/services/admin";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -7,7 +7,7 @@ import { OrderStatusBadge } from "@/components/domain/order-card";
 import { dateShort, rub } from "@/lib/format";
 
 export default async function AdminOrders({ searchParams }: PageProps<"/admin/orders">) {
-  await requireAdmin();
+  await pageAdmin();
   const p = await searchParams;
   const q = sp(p.q);
   const status = sp(p.status);

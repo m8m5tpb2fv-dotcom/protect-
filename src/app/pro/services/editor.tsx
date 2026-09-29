@@ -46,7 +46,7 @@ export function ServicesEditor({ initial, suggestions }: { initial: Svc[]; sugge
       {initial.length === 0 ? (
         <EmptyState icon={ListPlus} title="Добавьте услуги" text="Профили с прайсом получают больше заказов: клиентам проще выбрать." />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-[24px] bg-surface shadow-card">
+        <ul className="divide-y divide-line overflow-hidden rounded-[24px] bezel">
           {initial.map((s) => (
             <li key={s.id} className="flex items-center gap-3 px-5 py-4">
               <div className="min-w-0 flex-1">
@@ -78,7 +78,7 @@ export function ServicesEditor({ initial, suggestions }: { initial: Svc[]; sugge
           <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">Популярное в вашей специализации</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
-              <button key={s.id} onClick={() => setForm({ ...EMPTY, title: s.name, priceFrom: s.priceFrom ? String(s.priceFrom) : "", unit: s.unit ?? "за услугу", serviceId: s.id })} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-[14px] font-medium shadow-soft ring-1 ring-line">
+              <button key={s.id} onClick={() => setForm({ ...EMPTY, title: s.name, priceFrom: s.priceFrom ? String(s.priceFrom) : "", unit: s.unit ?? "за услугу", serviceId: s.id })} className="press inline-flex h-10 items-center gap-1.5 rounded-full bezel px-4 text-[14px] font-medium ring-1 ring-line">
                 <Plus className="h-4 w-4" /> {s.name}
               </button>
             ))}

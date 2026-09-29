@@ -15,7 +15,7 @@ function applyTheme(p: Pref) {
 const noopSubscribe = () => () => {};
 
 export function ThemeSwitch() {
-  const initial = useSyncExternalStore(noopSubscribe, () => (document.documentElement.dataset.themePref as Pref) || "system", () => "system" as Pref);
+  const initial = useSyncExternalStore(noopSubscribe, () => (document.documentElement.dataset.themePref as Pref) || "dark", () => "dark" as Pref);
   const [chosen, setChosen] = useState<Pref | null>(null);
   const pref = chosen ?? initial;
   const { isTelegram } = useTelegram();

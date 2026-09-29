@@ -24,11 +24,11 @@ export function Filters({ base, q, status, statuses }: { base: string; q?: strin
     <div className="mb-4 flex flex-wrap items-center gap-2">
       <form action={base} className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input name="q" defaultValue={q} placeholder="Поиск" aria-label="Поиск" className="h-10 w-64 rounded-xl bg-surface pl-10 pr-3 text-[14px] shadow-soft outline-none ring-1 ring-line focus:ring-2 focus:ring-ink" />
+        <input name="q" defaultValue={q} placeholder="Поиск" aria-label="Поиск" className="h-10 w-64 rounded-xl bezel pl-10 pr-3 text-[14px] outline-none ring-1 ring-line focus:ring-2 focus:ring-ink" />
         {status && <input type="hidden" name="status" value={status} />}
       </form>
       {statuses?.map((s) => (
-        <Link key={s.v} href={`${base}?${new URLSearchParams({ ...(q ? { q } : {}), ...(s.v ? { status: s.v } : {}) })}`} className={cn("inline-flex h-10 items-center rounded-xl px-3.5 text-[13.5px] font-semibold", (status ?? "") === s.v ? "bg-ink text-bg" : "bg-surface shadow-soft ring-1 ring-line")}>
+        <Link key={s.v} href={`${base}?${new URLSearchParams({ ...(q ? { q } : {}), ...(s.v ? { status: s.v } : {}) })}`} className={cn("inline-flex h-10 items-center rounded-xl px-3.5 text-[13.5px] font-semibold", (status ?? "") === s.v ? "bg-ink text-bg" : "bezel ring-1 ring-line")}>
           {s.l}
         </Link>
       ))}
@@ -38,7 +38,7 @@ export function Filters({ base, q, status, statuses }: { base: string; q?: strin
 
 export function Table({ head, children, empty }: { head: string[]; children: ReactNode; empty?: boolean }) {
   return (
-    <div className="overflow-x-auto rounded-[20px] bg-surface shadow-card">
+    <div className="overflow-x-auto rounded-[20px] bezel">
       <table className="w-full min-w-[720px] text-left text-[13.5px]">
         <thead className="border-b border-line text-[12px] uppercase tracking-wide text-muted">
           <tr>

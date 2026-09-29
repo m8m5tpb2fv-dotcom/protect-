@@ -48,7 +48,7 @@ export function LoginForm({ next, demo, telegramBot, telegramEnabled }: { next: 
   };
 
   return (
-    <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 pt-[calc(var(--safe-top)+12px)] lg:pt-16">
+    <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col overflow-x-clip px-5 pb-10 pt-[calc(var(--safe-top)+12px)] lg:pt-16">
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-10 h-72 w-72 rounded-full bg-accent opacity-30 blur-[90px]" />
       <Link href="/" className="press relative -ml-2 inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-surface-2 lg:hidden" aria-label="На главную">
         <ArrowLeft className="h-5 w-5" />
@@ -61,7 +61,7 @@ export function LoginForm({ next, demo, telegramBot, telegramEnabled }: { next: 
 
       {isTelegram && authError && <p className="mt-6 rounded-2xl bg-danger-soft p-4 text-[14px] text-danger">Не удалось войти через Telegram: {authError}. Войдите по телефону или email.</p>}
 
-      <div className="relative mt-8 rounded-[28px] bg-surface p-5 shadow-card">
+      <div className="relative mt-8 rounded-[28px] bezel p-5">
         <Segmented
           className="mb-5 w-full [&>*]:flex-1 [&>*]:justify-center"
           value={tab}
@@ -136,7 +136,7 @@ export function LoginForm({ next, demo, telegramBot, telegramEnabled }: { next: 
       </div>
 
       {!isTelegram && (
-        <div className="relative mt-4 flex items-center gap-3 rounded-[24px] bg-surface p-4 shadow-soft">
+        <div className="relative mt-4 flex items-center gap-3 rounded-[24px] bezel p-4">
           <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2AABEE] text-white">
             <Send className="h-5 w-5 -translate-x-px" />
           </span>

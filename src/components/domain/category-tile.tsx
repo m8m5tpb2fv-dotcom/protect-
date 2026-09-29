@@ -4,53 +4,67 @@ import { cn } from "@/lib/cn";
 import { pl } from "@/lib/format";
 import { toneStyle } from "@/lib/tones";
 import { CatalogIcon } from "../ui/catalog-icon";
+import { Folder, TabJoint } from "../ui/folder";
 
 type Cat = { slug: string; name: string; icon: string; tone: string; description?: string };
 
-/** Pastel tile with a large line icon. Dark mode uses the category's deep ink tone. */
-export function CategoryTile({ c, count, size = "md", className }: { c: Cat; count?: number; size?: "md" | "lg"; className?: string }) {
+/** Graphite folder tile (reference: Workouts). The category tone only tints the icon chip. */
+export function CategoryTile({ c, count, className }: { c: Cat; count?: number; className?: string }) {
   return (
-    <Link
-      href={`/services/${c.slug}`}
-      style={toneStyle(c.tone)}
-      className={cn(
-        "press lift group relative flex overflow-hidden rounded-[var(--radius-card)] bg-[linear-gradient(145deg,var(--t-a),color-mix(in_srgb,var(--t-b)_55%,var(--t-a)))] text-[var(--t-ink)] dark:bg-[linear-gradient(145deg,color-mix(in_srgb,var(--t-ink)_70%,#000),color-mix(in_srgb,var(--t-c)_28%,#111))] dark:text-[var(--t-a)]",
-        size === "lg" ? "min-h-[190px] flex-col justify-between p-5 md:min-h-[260px] md:p-6" : "min-h-[128px] flex-col justify-between p-4 md:min-h-[150px]",
-        className,
-      )}
-    >
-      <CatalogIcon
-        name={c.icon}
-        strokeWidth={1.1}
-        className={cn("pointer-events-none absolute opacity-30 transition-transform duration-700 ease-[var(--ease-spring)] group-hover:rotate-[-6deg] group-hover:scale-110", size === "lg" ? "-bottom-6 -right-6 h-48 w-48" : "-bottom-4 -right-4 h-24 w-24")}
-      />
-      <span className={cn("inline-flex items-center justify-center rounded-2xl bg-white/55 backdrop-blur dark:bg-white/10", size === "lg" ? "h-12 w-12" : "h-10 w-10")}>
-        <CatalogIcon name={c.icon} className={size === "lg" ? "h-6 w-6" : "h-5 w-5"} />
-      </span>
-      <span className="relative">
-        <span className={cn("block font-semibold tracking-[-0.025em]", size === "lg" ? "text-[26px] leading-tight md:text-[30px]" : "text-[16px] leading-tight md:text-[17px]")}>{c.name}</span>
-        {size === "lg" && c.description && <span className="mt-1 block max-w-[260px] text-[14px] opacity-75">{c.description}</span>}
-        {count != null && count > 0 && <span className={cn("mt-1 block opacity-70 tabular", size === "lg" ? "text-[14px]" : "text-[12.5px]")}>{pl(count, ["специалист", "специалиста", "специалистов"])}</span>}
-      </span>
-      {size === "lg" && (
-        <span className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/55 backdrop-blur transition-transform group-hover:rotate-45 dark:bg-white/10">
-          <ArrowUpRight className="h-5 w-5" />
+    <Link href={`/services/${c.slug}`} style={toneStyle(c.tone)} className={cn("press group block", className)} aria-label={`${c.name}${count ? `, ${count} специалистов` : ""}`}>
+      <Folder bodyClassName="flex min-h-[132px] flex-col justify-between p-4 transition-colors group-hover:bg-surface-2 md:min-h-[150px]">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--t-c)_22%,transparent)] text-[var(--t-ink)] dark:text-[var(--t-b)]">
+          <CatalogIcon name={c.icon} className="h-[18px] w-[18px]" />
         </span>
-      )}
+        <span>
+          <span className="block text-[16.5px] font-semibold leading-tight tracking-[-0.02em]">{c.name}</span>
+          <span className="mt-1 block text-[13px] text-muted tabular">{count ? pl(count, ["специалист", "специалиста", "специалистов"]) : "Скоро"}</span>
+        </span>
+      </Folder>
+    </Link>
+  );
+}
+
+/** Hero tile: grainy gradient artwork with a notched dark panel (reference: humbleteam «Your balance»). */
+export function CategoryHero({ c, count, className }: { c: Cat; count?: number; className?: string }) {
+  return (
+    <Link href={`/services/${c.slug}`} className={cn("press lift group relative block overflow-hidden rounded-[28px] bg-surface", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/art/${c.tone}/${c.icon}/hero-${c.slug}.svg?w=1200&h=900`} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-[var(--ease-spring)] group-hover:scale-[1.04]" />
+      <div className="relative flex h-full min-h-[250px] flex-col justify-between md:min-h-[320px]">
+        <div className="flex items-start justify-between p-5">
+          <span className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-white md:text-[32px]">{c.name}</span>
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition-transform group-hover:rotate-45">
+            <ArrowUpRight className="h-5 w-5" />
+          </span>
+        </div>
+        <div className="relative mx-1.5 mb-1.5 text-[#0e0e10]">
+          <span className="absolute -top-[26px] left-1/2 h-[28px] -translate-x-1/2 rounded-t-[12px] bg-[#0e0e10] px-5 pt-1.5 text-[12.5px] font-semibold text-white/90 tabular">
+            <TabJoint side="right" className="bottom-0 text-[#0e0e10]" />
+            <TabJoint side="left" className="bottom-0 text-[#0e0e10]" />
+            {count ? pl(count, ["специалист", "специалиста", "специалистов"]) : "Скоро"}
+          </span>
+          <div className="rounded-[22px] bg-[#0e0e10] px-5 pb-4 pt-4 text-white">
+            <p className="text-[14px] leading-snug text-white/70">{c.description}</p>
+          </div>
+        </div>
+      </div>
     </Link>
   );
 }
 
 export function AllServicesTile({ total, className }: { total: number; className?: string }) {
   return (
-    <Link href="/services" className={cn("press lift flex min-h-[128px] flex-col justify-between rounded-[var(--radius-card)] bg-ink p-4 text-bg md:min-h-[150px]", className)}>
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-accent-ink">
-        <LayoutGrid className="h-5 w-5" />
-      </span>
-      <span>
-        <span className="block text-[16px] font-semibold tracking-[-0.025em] md:text-[17px]">Все услуги</span>
-        <span className="mt-1 block text-[12.5px] opacity-65 tabular">{pl(total, ["исполнитель", "исполнителя", "исполнителей"])}</span>
-      </span>
+    <Link href="/services" className={cn("press group block", className)}>
+      <Folder className="[--folder:var(--accent)]" bodyClassName="flex min-h-[132px] flex-col justify-between p-4 !text-accent-ink md:min-h-[150px]">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-black/10">
+          <LayoutGrid className="h-[18px] w-[18px]" />
+        </span>
+        <span>
+          <span className="block text-[16.5px] font-semibold leading-tight tracking-[-0.02em]">Все услуги</span>
+          <span className="mt-1 block text-[13px] opacity-65 tabular">{pl(total, ["исполнитель", "исполнителя", "исполнителей"])}</span>
+        </span>
+      </Folder>
     </Link>
   );
 }

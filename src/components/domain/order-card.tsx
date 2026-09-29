@@ -21,7 +21,7 @@ export function OrderCard({ o, href, extra, viewer = "client", clientName }: { o
   const needsReview = viewer === "client" && o.status === "completed" && !o.hasReview;
   const person = viewer === "provider" ? (clientName ? { name: clientName, avatar: null } : null) : o.providerName ? { name: o.providerName, avatar: o.providerAvatar } : null;
   return (
-    <Link href={href ?? `/orders/${o.id}`} className="press lift group flex gap-4 rounded-[26px] bg-surface p-4 shadow-card">
+    <Link href={href ?? `/orders/${o.id}`} className="press lift group flex gap-4 rounded-[26px] bezel p-4">
       <span style={toneStyle(o.tone)} className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--t-a)] text-[var(--t-ink)] dark:bg-[color-mix(in_srgb,var(--t-ink)_70%,#000)] dark:text-[var(--t-a)]">
         <CatalogIcon name={o.icon} className="h-5 w-5" />
       </span>

@@ -1,5 +1,5 @@
 import { desc } from "drizzle-orm";
-import { requireAdmin } from "@/server/auth/session";
+import { pageAdmin } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { promoCodes } from "@/server/db/schema";
 import { AdminForm } from "@/components/admin/admin-form";
@@ -9,12 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { dateShort } from "@/lib/format";
 
 export default async function AdminPromo() {
-  const me = await requireAdmin();
+  const me = await pageAdmin();
   const rows = await db.select().from(promoCodes).orderBy(desc(promoCodes.createdAt));
   return (
     <AdminPage title="Промокоды" subtitle="Скидки на Pro и продвижение">
       {me.role === "admin" && (
-        <section className="mb-5 rounded-[22px] bg-surface p-5 shadow-card">
+        <section className="mb-5 rounded-[22px] bezel p-5">
           <AdminForm
             type="promo.create"
             fields={[

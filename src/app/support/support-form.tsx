@@ -15,7 +15,7 @@ export function SupportForm({ needEmail }: { needEmail: boolean }) {
   const router = useRouter();
   return (
     <form
-      className="mt-6 flex flex-col gap-4 rounded-[28px] bg-surface p-5 shadow-card"
+      className="mt-6 flex flex-col gap-4 rounded-[28px] bezel p-5"
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);

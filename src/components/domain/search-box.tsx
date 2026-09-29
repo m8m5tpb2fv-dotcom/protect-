@@ -94,7 +94,7 @@ export function SearchBox({ initial = "", autoFocus, size = "lg", className, onS
           submit();
         }}
         className={cn(
-          "group flex items-center gap-3 rounded-full bg-surface shadow-card ring-1 ring-line transition-shadow focus-within:shadow-float focus-within:ring-2 focus-within:ring-ink",
+          "group flex items-center gap-3 rounded-full bezel ring-1 ring-line transition-shadow focus-within:shadow-float focus-within:ring-2 focus-within:ring-ink",
           size === "lg" ? "h-[62px] pl-5 pr-2" : "h-[52px] pl-4 pr-1.5",
         )}
       >

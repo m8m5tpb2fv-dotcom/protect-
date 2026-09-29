@@ -33,7 +33,7 @@ export function SettingsForm({ user, districts }: { user: U; districts: { id: nu
   };
   return (
     <>
-      <section className="rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="rounded-[28px] bezel p-5">
         <div className="flex items-center gap-4">
           <button onClick={() => fileRef.current?.click()} className="press relative rounded-full" aria-label="Изменить фото">
             <Avatar name={f.name} src={f.avatarUrl} size={80} />
@@ -90,7 +90,7 @@ export function SettingsForm({ user, districts }: { user: U; districts: { id: nu
         </form>
       </section>
 
-      <section className="mt-3 rounded-[28px] bg-surface p-5 shadow-card">
+      <section className="mt-3 rounded-[28px] bezel p-5">
         <h2 className="mb-2 text-[15px] font-semibold">Уведомления</h2>
         <Switch label="В Telegram" description={user.hasTelegram ? "Отклики, сообщения, статусы заказов" : "Откройте приложение через Telegram-бота, чтобы подключить"} checked={f.notifyTelegram} disabled={!user.hasTelegram} onChange={(v) => (setF({ ...f, notifyTelegram: v }), save({ notifyTelegram: v }, true))} />
         <Switch className="mt-2" label="На email" description={user.email ? "Важные события: выбор исполнителя, модерация, оплаты" : "Email не указан"} checked={f.notifyEmail} disabled={!user.email} onChange={(v) => (setF({ ...f, notifyEmail: v }), save({ notifyEmail: v }, true))} />

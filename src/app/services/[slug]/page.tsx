@@ -103,7 +103,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
       {r.kind === "category" ? (
         <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0">
           {r.cat.subs.map((s) => (
-            <Link key={s.id} href={`/services/${s.slug}`} className="press inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-surface px-4 text-[14.5px] font-semibold shadow-soft ring-1 ring-line hover:ring-line-strong">
+            <Link key={s.id} href={`/services/${s.slug}`} className="press inline-flex h-11 shrink-0 items-center gap-2 rounded-full bezel px-4 text-[14.5px] font-semibold ring-1 ring-line hover:ring-line-strong">
               <CatalogIcon name={s.icon} className="h-4 w-4" /> {s.name}
             </Link>
           ))}
@@ -113,7 +113,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           <h2 id="prices" className="sr-only">Услуги и цены</h2>
           <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 no-scrollbar lg:mx-0 lg:grid lg:grid-cols-4 lg:px-0">
             {r.sub!.services.map((s) => (
-              <Link key={s.id} href={`/order/new?service=${s.slug}`} className="press lift flex w-[220px] shrink-0 flex-col justify-between rounded-[22px] bg-surface p-4 shadow-card lg:w-auto">
+              <Link key={s.id} href={`/order/new?service=${s.slug}`} className="press lift flex w-[220px] shrink-0 flex-col justify-between rounded-[22px] bezel p-4 lg:w-auto">
                 <span className="text-[15px] font-semibold leading-snug">{s.name}</span>
                 <span className="mt-3 flex items-end justify-between">
                   <span className="text-[14px] text-muted">
