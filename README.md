@@ -122,6 +122,13 @@ npm run dev                        # http://localhost:3000
 ## 12. Деплой
 - **VPS/Docker**: `docker compose up -d --build` (приложение + PostgreSQL, миграции при старте). Поставьте перед ним Caddy/Nginx с HTTPS.
 - **Vercel**: подключите репозиторий, задайте переменные, внешняя PostgreSQL, `STORAGE_DRIVER=s3` (файловая система Vercel эфемерна). Выполните `npm run db:migrate` из CI.
+- **Railway** (`railway.json` уже в репозитории — сборка по Dockerfile, health-check `/api/health`):
+  1. New Project → Deploy from GitHub repo → этот репозиторий (ветка в Settings → Source).
+  2. В проекте: **+ New → Database → PostgreSQL**.
+  3. В сервисе приложения → Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (≥ 10 символов), `DEMO_MODE=true` для демо-данных.
+  4. Settings → Networking → **Generate Domain**. Адрес подхватится из `RAILWAY_PUBLIC_DOMAIN` сам (или задайте `APP_URL`/`NEXT_PUBLIC_APP_URL`).
+  5. Загрузки: подключите Volume с путём `/app/storage` и добавьте `RAILWAY_RUN_UID=0` (том монтируется от root), либо `STORAGE_DRIVER=s3`.
+  При каждом старте `scripts/start.sh` применяет миграции и идемпотентный сид (справочники, админ, демо при `DEMO_MODE=true`).
 - `GET /api/health` — health-check (проверяет БД).
 
 ## 13. Готово и работает

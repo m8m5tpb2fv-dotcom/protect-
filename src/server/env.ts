@@ -9,7 +9,9 @@ import { z } from "zod";
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1).default("postgres://ryadom:ryadom@localhost:5432/ryadom"),
-  APP_URL: z.string().default(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  APP_URL: z
+    .string()
+    .default(process.env.NEXT_PUBLIC_APP_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "http://localhost:3000")),
   SESSION_SECRET: z.string().default(""),
   TELEGRAM_BOT_TOKEN: z.string().default(""),
   TELEGRAM_WEBHOOK_SECRET: z.string().default(""),
