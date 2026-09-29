@@ -111,7 +111,7 @@ npm run dev                        # http://localhost:3000
 - Загрузки: проверка по сигнатуре файла (не по MIME клиента), лимиты размера и пикселей, перекодирование в WebP с удалением EXIF/GPS, rate limit.
 
 ## 10. Карты
-`NEXT_PUBLIC_MAP_PROVIDER=leaflet` (по умолчанию, OSM/CARTO, ключ не нужен) | `yandex` (+`NEXT_PUBLIC_YANDEX_MAPS_API_KEY`) | `2gis` (+`NEXT_PUBLIC_2GIS_API_KEY`). Добавить провайдера — реализовать `MapAdapter` в `src/components/maps/adapters.ts`. При ошибке загрузки провайдера — фолбэк на Leaflet.
+`NEXT_PUBLIC_MAP_PROVIDER=leaflet` (по умолчанию, тайлы OpenStreetMap, ключ не нужен; при большой нагрузке переходите на Яндекс/2ГИС — политика использования tile.openstreetmap.org) | `yandex` (+`NEXT_PUBLIC_YANDEX_MAPS_API_KEY`) | `2gis` (+`NEXT_PUBLIC_2GIS_API_KEY`). Добавить провайдера — реализовать `MapAdapter` в `src/components/maps/adapters.ts`. При ошибке загрузки провайдера — фолбэк на Leaflet.
 
 ## 11. Платежи
 Абстракция `PaymentGateway` (`src/server/payments`).

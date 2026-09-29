@@ -38,15 +38,18 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-/* ───────── Leaflet + OSM/CARTO tiles (no key) ───────── */
+/* ───────── Leaflet + OpenStreetMap tiles (no key) ───────── */
 async function leaflet(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   const L = (await import("leaflet")).default;
   await import("leaflet/dist/leaflet.css");
   const map = L.map(el, { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView(o.center, o.zoom);
+  // Leaflet's default prefix carries a flag icon; keep a plain text credit instead.
+  map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
   L.control.zoom({ position: "bottomright" }).addTo(map);
-  L.tileLayer(`https://{s}.basemaps.cartocdn.com/${o.dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`, {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
+  // Dark theme = the same tiles through a CSS filter (see .map-dark in globals.css).
+  el.classList.toggle("map-dark", o.dark);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
   }).addTo(map);
   const layer = L.layerGroup().addTo(map);
