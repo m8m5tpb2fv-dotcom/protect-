@@ -3,7 +3,9 @@ import { eq } from "drizzle-orm";
 import { APP } from "@/config/app";
 import { decodeStartParam } from "@/lib/deeplink";
 import { db } from "../db";
-import { users } from "../db/schema";
+import { providers, users } from "../db/schema";
+import { dismissOrder } from "../services/orders";
+import { SKIP_ORDER } from "./cards";
 import { answerCallback, editMessage, escapeHtml, sendMessage, webAppUrl } from "./bot";
 import { confirmTelegramLogin, describeDevice, findPendingLogin, parseLoginStartParam, rejectTelegramLogin } from "../auth/telegram-login";
 
@@ -31,9 +33,26 @@ async function askLoginConfirmation(chatId: number, token: string) {
   );
 }
 
+/** «Не интересно» under a new-order card: hide it from this provider's feed and collapse the message. */
+async function skipOrder(q: NonNullable<Update["callback_query"]>, orderId: string) {
+  const [row] = await db
+    .select({ providerId: providers.id })
+    .from(users)
+    .innerJoin(providers, eq(providers.userId, users.id))
+    .where(eq(users.telegramId, String(q.from.id)));
+  if (!row) {
+    await answerCallback(q.id, "Профиль исполнителя не найден");
+    return;
+  }
+  const o = await dismissOrder(row.providerId, orderId);
+  await answerCallback(q.id, "Скрыли из ленты");
+  if (q.message) await editMessage(q.message.chat.id, q.message.message_id, `🙈 Скрыто: «${escapeHtml(o.title)}»\nЗаявка больше не появится в вашей ленте.`);
+}
+
 async function handleCallback(q: NonNullable<Update["callback_query"]>) {
   const [action, id] = (q.data ?? "").split(":");
   const valid = !!id && /^[0-9a-f-]{36}$/.test(id) && !q.from.is_bot;
+  if (valid && action === SKIP_ORDER) return skipOrder(q, id);
   let reply = "Запрос устарел";
   let text: string | null = null;
   if (valid && action === "login") {

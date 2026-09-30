@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { after } from "next/server";
 import { db, type DbOrTx } from "../db";
 import { notifications, users } from "../db/schema";
-import { escapeHtml, sendMessage, telegramEnabled, webAppUrl } from "../telegram/bot";
+import { escapeHtml, sendMessage, telegramEnabled, webAppUrl, type ReplyMarkup } from "../telegram/bot";
 import { sendEmail } from "./channels";
 import { log } from "../log";
 
@@ -19,7 +19,14 @@ export type NotificationType =
   | "billing"
   | "system";
 
-export type NotifyInput = { type: NotificationType; title: string; body?: string; link?: string };
+export type NotifyInput = {
+  type: NotificationType;
+  title: string;
+  body?: string;
+  link?: string;
+  /** Rich Telegram rendering (HTML text + buttons). Defaults to title/body with an «Открыть» button. */
+  telegram?: { text: string; markup: ReplyMarkup };
+};
 
 /** Types that are also pushed via email (others are in-app + Telegram only). */
 const EMAIL_TYPES = new Set<NotificationType>(["order.assigned", "provider.moderation", "billing", "review.new"]);
@@ -49,8 +56,11 @@ async function dispatch(notificationId: string, userId: string, input: NotifyInp
     if (!telegramEnabled()) deliveries.telegram = "disabled";
     else {
       try {
-        const text = `<b>${escapeHtml(input.title)}</b>${input.body ? `\n${escapeHtml(input.body)}` : ""}`;
-        await sendMessage(u.telegramId, text, input.link ? { inline_keyboard: [[{ text: "Открыть", web_app: { url: webAppUrl(input.link) } }]] } : undefined);
+        if (input.telegram) await sendMessage(u.telegramId, input.telegram.text, input.telegram.markup);
+        else {
+          const text = `<b>${escapeHtml(input.title)}</b>${input.body ? `\n${escapeHtml(input.body)}` : ""}`;
+          await sendMessage(u.telegramId, text, input.link ? { inline_keyboard: [[{ text: "Открыть", web_app: { url: webAppUrl(input.link) } }]] } : undefined);
+        }
         deliveries.telegram = "sent";
       } catch (e) {
         deliveries.telegram = "failed";

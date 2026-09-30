@@ -29,6 +29,13 @@
       "when": 1790759426993,
       "tag": "0003_telegram_web_login",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790760900335,
+      "tag": "0004_order_dismissals",
+      "breakpoints": true
     }
   ]
 }

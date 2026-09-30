@@ -416,6 +416,17 @@ export const orderResponses = pgTable(
 
 /* ───────────────────────────── messaging ───────────────────────────── */
 
+/** A provider hid an open order from their feed («Не интересно» in the app or in Telegram). */
+export const orderDismissals = pgTable(
+  "order_dismissals",
+  {
+    providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.providerId, t.orderId] })],
+);
+
 export const conversations = pgTable(
   "conversations",
   {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { signInitData, verifyInitData } from "@/server/telegram/init-data";
 import { formatPhone, normalizePhone } from "@/lib/phone";
 import { decodeStartParam, encodeStartParam, miniAppUrl } from "@/lib/deeplink";
+import { newOrderCard } from "@/server/telegram/cards";
 import { km, plural, priceFrom, relative } from "@/lib/format";
 import { slugify } from "@/lib/slug";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -127,5 +128,28 @@ describe("search tokenizer", () => {
 describe("address masking", () => {
   it("hides the flat before assignment", () => {
     expect(maskAddress("Саратов, ул. Московская, 12, кв. 45")).toBe("Саратов, ул. Московская, 12");
+  });
+});
+
+describe("telegram new-order card", () => {
+  const base = { id: "11111111-2222-3333-4444-555555555555", title: "Течёт <кран>", description: "Капает с утра, нужна замена картриджа. ".repeat(10), urgency: "urgent" as const, budget: 2000, subName: "Сантехник", districtName: "Ленинский", distanceKm: 1.24, photos: 2, direct: false };
+  it("shows what/where/when/budget, escapes HTML and clips long text", () => {
+    const { text } = newOrderCard(base);
+    expect(text).toContain("Новая заявка рядом");
+    expect(text).toContain("Течёт &lt;кран&gt;");
+    expect(text).toContain("Ленинский · 1,2 км от вас");
+    expect(text).toContain("Срочно · бюджет до 2");
+    expect(text).toContain("📷 2 фото");
+    expect(text).toContain("…");
+    expect(text.length).toBeLessThan(700);
+  });
+  it("offers respond + skip for open orders, only respond for direct ones", () => {
+    const open = newOrderCard(base).markup.inline_keyboard.flat();
+    expect(open[0].web_app?.url).toMatch(/\/orders\/11111111-2222-3333-4444-555555555555$/);
+    expect(open[1].callback_data).toBe("skip:11111111-2222-3333-4444-555555555555");
+    expect(Buffer.byteLength(open[1].callback_data!)).toBeLessThanOrEqual(64);
+    const direct = newOrderCard({ ...base, direct: true, budget: null }).markup.inline_keyboard.flat();
+    expect(direct).toHaveLength(1);
+    expect(newOrderCard({ ...base, direct: true, budget: null }).text).toContain("бюджет не указан");
   });
 });

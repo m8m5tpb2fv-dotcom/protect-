@@ -12,7 +12,7 @@ import { seedReference } from "@/server/db/seed";
 import { createSession, userFromToken, type CurrentUser } from "@/server/auth/session";
 import { loginWithEmail, loginWithTelegram, registerWithEmail, requestPhoneCode, verifyPhoneCode } from "@/server/auth/service";
 import { signInitData } from "@/server/telegram/init-data";
-import { createOrder, getOrderDetail, leaveReview, orderAction, respondToOrder } from "@/server/services/orders";
+import { createOrder, dismissOrder, getOrderDetail, leaveReview, orderAction, providerFeed, respondToOrder } from "@/server/services/orders";
 import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
@@ -250,6 +250,19 @@ describe("website login via the Telegram bot", () => {
     expect(await findPendingLogin(c.token)).toBeNull();
     expect(await confirmTelegramLogin(c.id, { id: 555001, first_name: "Сайт" })).toBeNull();
     expect((await claimTelegramLogin(c.id, c.nonce)).status).toBe("expired");
+  });
+});
+
+describe("new-order notifications", () => {
+  it("matching providers get an order.new notification; «Не интересно» hides the order from their feed", async () => {
+    const o = await createOrder(client, { subcategoryId: santehnikId, title: "Замена смесителя", description: "Нужно поменять смеситель на кухне", address: "ул. Чапаева, 10, кв. 3", urgency: "today", budget: 1500, photos: [] }, cityId);
+    const notes = await db.select().from(s.notifications).where(and(eq(s.notifications.userId, provider.id), eq(s.notifications.link, `/orders/${o.id}`)));
+    expect(notes[0]?.type).toBe("order.new");
+    expect(notes[0].body).not.toContain("кв. 3");
+    expect((await providerFeed(provider.provider!.id)).some((f) => f.id === o.id)).toBe(true);
+    await dismissOrder(provider.provider!.id, o.id);
+    await dismissOrder(provider.provider!.id, o.id); // idempotent
+    expect((await providerFeed(provider.provider!.id)).some((f) => f.id === o.id)).toBe(false);
   });
 });
 

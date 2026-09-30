@@ -4,7 +4,7 @@ import { URGENCY } from "@/lib/format";
 import type { CreateOrderInput } from "@/lib/validation";
 import { db, type DbOrTx } from "../db";
 import {
-  categories, conversations, districts, messages, orderEvents, orderPhotos, orderResponses, orders, providers, providerSubcategories, reviews, services, subcategories, users, type Order,
+  categories, conversations, districts, messages, orderDismissals, orderEvents, orderPhotos, orderResponses, orders, providers, providerSubcategories, reviews, services, subcategories, users, type Order,
 } from "../db/schema";
 import type { CurrentUser } from "../auth/session";
 import { badRequest, conflict, forbidden, notFound } from "../http/errors";
@@ -12,8 +12,33 @@ import { notify } from "../notifications/notify";
 import { getGeo } from "./catalog";
 import { matchingProvidersForOrder } from "./providers";
 import { logOrderEvent, recomputeProviderStats } from "./provider-stats";
+import { newOrderCard } from "../telegram/cards";
 
 export const OPEN_STATUSES = ["new", "responses"] as const;
+
+/** In-app + Telegram card (with «Откликнуться» / «Не интересно») for each provider who should see a new order. */
+async function notifyNewOrder(order: Order, recipients: { userId: string; distanceKm: number | null }[], direct: boolean) {
+  if (!recipients.length) return;
+  const [[meta], [{ photos }]] = await Promise.all([
+    db
+      .select({ subName: subcategories.name, districtName: districts.name })
+      .from(subcategories)
+      .leftJoin(districts, order.districtId != null ? eq(districts.id, order.districtId) : sql`false`)
+      .where(eq(subcategories.id, order.subcategoryId)),
+    db.select({ photos: sql<number>`count(*)::int` }).from(orderPhotos).where(eq(orderPhotos.orderId, order.id)),
+  ]);
+  const urgencyLabel = URGENCY[order.urgency].label.toLowerCase();
+  for (const r of recipients) {
+    const km = r.distanceKm != null ? ` · ${r.distanceKm.toFixed(1).replace(".", ",")} км` : "";
+    await notify(r.userId, {
+      type: "order.new",
+      title: direct ? "Новый заказ для вас" : "Новая заявка рядом",
+      body: `«${order.title}» · ${urgencyLabel}${km}`,
+      link: `/orders/${order.id}`,
+      telegram: newOrderCard({ ...order, subName: meta?.subName ?? "", districtName: meta?.districtName ?? null, distanceKm: r.distanceKm, photos, direct }),
+    });
+  }
+}
 export const ACTIVE_STATUSES = ["new", "responses", "assigned", "in_progress"] as const;
 
 export async function createOrder(user: CurrentUser, input: CreateOrderInput, cityId: number) {
@@ -67,17 +92,8 @@ export async function createOrder(user: CurrentUser, input: CreateOrderInput, ci
     return o;
   });
 
-  const urgencyLabel = URGENCY[order.urgency].label.toLowerCase();
-  if (direct) {
-    await notify(direct.userId, { type: "order.new", title: "Новый заказ для вас", body: `«${order.title}» · ${urgencyLabel}`, link: `/orders/${order.id}` });
-  } else {
-    const targets = await matchingProvidersForOrder(order);
-    for (const t of targets) {
-      if (t.userId === user.id) continue;
-      const km = t.distanceKm != null ? ` · ${t.distanceKm.toFixed(1).replace(".", ",")} км` : "";
-      await notify(t.userId, { type: "order.new", title: "Новая заявка рядом", body: `«${order.title}» · ${urgencyLabel}${km}`, link: `/orders/${order.id}` });
-    }
-  }
+  if (direct) await notifyNewOrder(order, [{ userId: direct.userId, distanceKm: null }], true);
+  else await notifyNewOrder(order, (await matchingProvidersForOrder(order)).filter((t) => t.userId !== user.id), false);
   return order;
 }
 
@@ -271,7 +287,7 @@ export async function orderAction(user: CurrentUser, orderId: string, a: Action)
       await logOrderEvent(db, orderId, user.id, "declined", { providerId: p.id });
       await notify(order.clientId, { type: "order.status", title: "Исполнитель не сможет взять заказ", body: "Мы отправили вашу заявку другим специалистам рядом.", link: `/orders/${orderId}` });
       const targets = await matchingProvidersForOrder(order);
-      for (const t of targets) if (t.id !== p.id && t.userId !== order.clientId) await notify(t.userId, { type: "order.new", title: "Новая заявка рядом", body: `«${order.title}»`, link: `/orders/${orderId}` });
+      await notifyNewOrder(order, targets.filter((t) => t.id !== p.id && t.userId !== order.clientId), false);
       break;
     }
     case "start": {
@@ -385,6 +401,7 @@ export async function providerFeed(providerId: string, limit = 50) {
         inArray(orders.status, [...OPEN_STATUSES]),
         or(isNull(orders.directProviderId), eq(orders.directProviderId, providerId)),
         ne(orders.clientId, p.userId),
+        sql`not exists (select 1 from ${orderDismissals} d where d.order_id = ${orders.id} and d.provider_id = ${providerId})`,
       ),
     )
     .orderBy(sql`case ${orders.urgency} when 'urgent' then 0 when 'today' then 1 else 2 end`, desc(orders.createdAt))
@@ -434,4 +451,12 @@ export async function replyToReview(user: CurrentUser, reviewId: string, reply: 
   if (!r || r.providerId !== user.provider.id) throw notFound();
   if (r.reply) throw conflict("Вы уже ответили на этот отзыв");
   await db.update(reviews).set({ reply: reply.slice(0, 1000) }).where(eq(reviews.id, reviewId));
+}
+
+/** «Не интересно»: hides an open order from this provider's feed. Idempotent. */
+export async function dismissOrder(providerId: string, orderId: string) {
+  const [o] = await db.select({ id: orders.id, title: orders.title }).from(orders).where(eq(orders.id, orderId));
+  if (!o) throw notFound();
+  await db.insert(orderDismissals).values({ providerId, orderId }).onConflictDoNothing();
+  return o;
 }
