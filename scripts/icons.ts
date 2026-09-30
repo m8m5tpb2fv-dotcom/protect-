@@ -1,16 +1,23 @@
-/* Generates PNG app icons from the SVG mark. Run: npx tsx scripts/icons.ts */
-import { mkdirSync } from "node:fs";
+/* Generates app icons and Telegram images from the brand mark (src/lib/brand.ts). Run: npx tsx scripts/icons.ts */
+import { mkdirSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
+import { brandSvg } from "../src/lib/brand";
 
-const mark = (size: number, pad = 0) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" rx="${pad ? 0 : size * 0.3}" fill="#d4f25c"/><circle cx="${size / 2}" cy="${size / 2}" r="${(size / 2 - pad) * 0.56}" fill="none" stroke="#0d0d0f" stroke-opacity=".22" stroke-width="${size * 0.05}"/><circle cx="${size / 2}" cy="${size / 2}" r="${(size / 2 - pad) * 0.28}" fill="#0d0d0f"/></svg>`;
+const png = (svg: string, out: string, size: number) => sharp(Buffer.from(svg), { density: 72 * (size / 32) }).resize(size, size).png().toFile(out);
 
 async function main() {
   mkdirSync("public/icons", { recursive: true });
-  await sharp(Buffer.from(mark(192))).png().toFile("public/icons/icon-192.png");
-  await sharp(Buffer.from(mark(512))).png().toFile("public/icons/icon-512.png");
-  await sharp(Buffer.from(mark(512, 80))).png().toFile("public/icons/icon-maskable-512.png");
-  await sharp(Buffer.from(mark(180, 20))).png().toFile("public/icons/apple-touch-icon.png");
-  await sharp(Buffer.from(mark(48))).png().toFile("public/favicon.png");
+  mkdirSync("public/brand", { recursive: true });
+  writeFileSync("public/icon.svg", brandSvg());
+  await png(brandSvg({ rx: 9.6 }), "public/icons/icon-192.png", 192);
+  await png(brandSvg({ rx: 9.6 }), "public/icons/icon-512.png", 512);
+  // maskable: full-bleed background, glyph inside the 80% safe zone
+  await png(brandSvg({ rx: 0, scale: 0.78 }), "public/icons/icon-maskable-512.png", 512);
+  // iOS rounds the corners itself
+  await png(brandSvg({ rx: 0, scale: 0.9 }), "public/icons/apple-touch-icon.png", 180);
+  await png(brandSvg({ rx: 7 }), "public/favicon.png", 48);
+  // Telegram bot avatar (BotFather /setuserpic): square, Telegram crops it to a circle
+  await png(brandSvg({ rx: 0, scale: 0.82 }), "public/brand/bot-avatar-640.png", 640);
   console.log("icons generated");
 }
 main();

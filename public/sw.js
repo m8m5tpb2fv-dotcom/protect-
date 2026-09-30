@@ -1,5 +1,5 @@
 /* Рядом — service worker: offline app shell + cache-first static assets. API and HTML are network-first. */
-const VERSION = "ryadom-v1";
+const VERSION = "ryadom-v2";
 const SHELL = ["/offline.html", "/icon.svg", "/icons/icon-192.png", "/fonts/inter-cyrillic-wght-normal.woff2", "/fonts/inter-latin-wght-normal.woff2"];
 
 self.addEventListener("install", (e) => {
