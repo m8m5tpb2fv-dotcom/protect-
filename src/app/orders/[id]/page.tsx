@@ -21,7 +21,7 @@ import { cn } from "@/lib/cn";
 import { dateShort, pl, relative, rub, time, URGENCY } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { toneStyle } from "@/lib/tones";
-import { ChatLink, OrderActions, RespondForm, ResponsesList, ReviewForm, type ResponseItem } from "./actions";
+import { ChatLink, DeleteOrder, OrderActions, RespondForm, ResponsesList, ReviewForm, type ResponseItem } from "./actions";
 import { Hourglass } from "lucide-react";
 
 export const metadata: Metadata = { title: "Заказ", robots: { index: false } };
@@ -140,7 +140,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<"/or
 
   return (
     <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 pb-32 lg:px-6 lg:pt-6">
-      <PageHeader title={`Заказ №${o.number}`} subtitle={relative(o.createdAt)} backHref={role === "client" ? "/orders" : "/pro"} />
+      <PageHeader title={`Заказ №${o.number}`} subtitle={relative(o.createdAt)} backHref={role === "client" ? "/orders" : "/pro"} action={role === "client" ? <DeleteOrder orderId={o.id} status={o.status} /> : undefined} />
       {sp.created === "1" && role === "client" && (
         <div className="mb-4 flex items-start gap-3 rounded-[24px] bg-accent p-4 text-accent-ink animate-pop">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />

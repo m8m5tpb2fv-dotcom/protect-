@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
-import { Camera, Check, MessageCircle, Star, X } from "lucide-react";
+import { Camera, Check, MessageCircle, Star, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -176,7 +176,6 @@ export function RespondForm({ orderId, budget }: { orderId: string; budget: numb
 export function OrderActions({ orderId, role, status, isDirectToMe, isAssignedToMe, agreedPrice }: { orderId: string; role: string; status: string; isDirectToMe: boolean; isAssignedToMe: boolean; agreedPrice: number | null }) {
   const { busy, run } = useAction(orderId);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [finalPrice, setFinalPrice] = useState(agreedPrice ? String(agreedPrice) : "");
@@ -210,36 +209,11 @@ export function OrderActions({ orderId, role, status, isDirectToMe, isAssignedTo
         {role === "client" ? "Отменить заказ" : "Отказаться от заказа"}
       </Button>,
     );
-  const active = status === "assigned" || status === "in_progress";
-  if (role === "client")
-    buttons.push(
-      <Button key="delete" size="lg" variant="ghost" className="!text-danger" onClick={() => setDeleteOpen(true)}>
-        Удалить заявку
-      </Button>,
-    );
   if (!buttons.length) return null;
 
   return (
     <>
       <div className="flex flex-col gap-2">{buttons}</div>
-      <Sheet
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        title="Удалить заявку?"
-        footer={
-          <Button block size="lg" variant="danger" loading={busy === "delete"} onClick={async () => (await run("delete", { action: "delete" }, "Заявка удалена", "/orders"), setDeleteOpen(false))}>
-            Удалить
-          </Button>
-        }
-      >
-        <p className="text-[15px] text-ink-2">
-          {status === "completed" || status === "cancelled"
-            ? "Заявка исчезнет из «Моих заказов». Оставленный отзыв сохранится."
-            : active
-              ? "Заказ будет отменён, исполнитель получит уведомление. Заявка исчезнет из «Моих заказов»."
-              : "Заявка закроется: исполнители больше не смогут откликнуться. Она исчезнет из «Моих заказов»."}
-        </p>
-      </Sheet>
       <Sheet
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
@@ -359,5 +333,37 @@ export function ChatLink({ conversationId, label = "Открыть чат" }: { 
     <Link href={`/messages/${conversationId}`} className={buttonClass({ variant: "secondary", size: "lg", block: true })}>
       <MessageCircle className="h-5 w-5" /> {label}
     </Link>
+  );
+}
+
+/** «Удалить» in the order header (client only): confirmation explains what happens for the current status. */
+export function DeleteOrder({ orderId, status }: { orderId: string; status: string }) {
+  const { busy, run } = useAction(orderId);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const active = status === "assigned" || status === "in_progress";
+  return (
+    <>
+      <button type="button" onClick={() => setDeleteOpen(true)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[14px] font-semibold text-danger hover:bg-surface-3">
+        <Trash2 className="h-4 w-4" /> Удалить
+      </button>
+      <Sheet
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Удалить заявку?"
+        footer={
+          <Button block size="lg" variant="danger" loading={busy === "delete"} onClick={async () => (await run("delete", { action: "delete" }, "Заявка удалена", "/orders"), setDeleteOpen(false))}>
+            Удалить
+          </Button>
+        }
+      >
+        <p className="text-[15px] text-ink-2">
+          {status === "completed" || status === "cancelled"
+            ? "Заявка исчезнет из «Моих заказов». Оставленный отзыв сохранится."
+            : active
+              ? "Заказ будет отменён, исполнитель получит уведомление. Заявка исчезнет из «Моих заказов»."
+              : "Заявка закроется: исполнители больше не смогут откликнуться. Она исчезнет из «Моих заказов»."}
+        </p>
+      </Sheet>
+    </>
   );
 }
