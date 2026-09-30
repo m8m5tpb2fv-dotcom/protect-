@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { LogoMark } from "@/components/layout/logo";
 import { useTelegram } from "@/components/telegram/telegram-provider";
+import { TelegramLogin } from "./telegram-login";
 
-export function LoginForm({ next, demo, telegramBot, telegramLink }: { next: string; demo: boolean; telegramBot: string; telegramLink: string | null }) {
+export function LoginForm({ next, demo, telegramBot }: { next: string; demo: boolean; telegramBot: string }) {
   const router = useRouter();
   const { isTelegram, authError } = useTelegram();
   const [tab, setTab] = useState<"phone" | "email">("phone");
@@ -61,7 +62,17 @@ export function LoginForm({ next, demo, telegramBot, telegramLink }: { next: str
 
       {isTelegram && authError && <p className="mt-6 rounded-2xl bg-danger-soft p-4 text-[14px] text-danger">Не удалось войти через Telegram: {authError}. Войдите по телефону или email.</p>}
 
-      <div className="relative mt-8 rounded-[28px] bezel p-5">
+      {!isTelegram && telegramBot && (
+        <div className="relative mt-8">
+          <TelegramLogin bot={telegramBot} onDone={done} />
+          <p className="mt-2 text-center text-[12.5px] text-muted">Без паролей и SMS. Уведомления будут приходить в Telegram.</p>
+          <div className="mt-6 flex items-center gap-3 text-[13px] text-muted">
+            <span className="h-px flex-1 bg-line" /> или <span className="h-px flex-1 bg-line" />
+          </div>
+        </div>
+      )}
+
+      <div className={`relative rounded-[28px] bezel p-5 ${!isTelegram && telegramBot ? "mt-6" : "mt-8"}`}>
         <Segmented
           className="mb-5 w-full [&>*]:flex-1 [&>*]:justify-center"
           value={tab}
@@ -135,23 +146,12 @@ export function LoginForm({ next, demo, telegramBot, telegramLink }: { next: str
         )}
       </div>
 
-      {!isTelegram && (
+      {!isTelegram && !telegramBot && (
         <div className="relative mt-4 flex items-center gap-3 rounded-[24px] bezel p-4">
           <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2AABEE] text-white">
             <Send className="h-5 w-5 -translate-x-px" />
           </span>
-          <p className="flex-1 text-[14px] text-ink-2">
-            {telegramBot && telegramLink ? (
-              <>
-                Откройте нас в Telegram — вход произойдёт автоматически.{" "}
-                <a className="font-semibold text-ink underline" href={telegramLink} target="_blank" rel="noopener noreferrer">
-                  Открыть @{telegramBot}
-                </a>
-              </>
-            ) : (
-              "В Telegram Mini App вход происходит автоматически — без паролей и кодов."
-            )}
-          </p>
+          <p className="flex-1 text-[14px] text-ink-2">В Telegram Mini App вход происходит автоматически — без паролей и кодов.</p>
         </div>
       )}
 

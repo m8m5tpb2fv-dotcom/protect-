@@ -84,32 +84,43 @@ export async function verifyPhoneCode(input: { phone: string; code: string; name
   return { user: u, isNew: true };
 }
 
-/** Telegram Mini App auth: the signature proves the user; we never trust initDataUnsafe. */
-export async function loginWithTelegram(initData: string) {
-  if (!env.TELEGRAM_BOT_TOKEN) throw new AppError(503, "telegram_disabled", "Вход через Telegram не настроен");
-  const data = verifyInitData(initData, env.TELEGRAM_BOT_TOKEN);
-  if (!data) throw unauthorized("Не удалось проверить данные Telegram");
-  const tgId = String(data.user.id);
-  const name = [data.user.first_name, data.user.last_name].filter(Boolean).join(" ").slice(0, 60) || "Пользователь Telegram";
+export type TelegramIdentity = { id: number; first_name: string; last_name?: string; username?: string };
+
+/**
+ * Finds or creates the account for a Telegram identity. Callers must have authenticated the identity first
+ * (signed Mini App initData, or an update delivered to our bot webhook).
+ */
+export async function upsertTelegramUser(tg: TelegramIdentity, opts: { chatAllowed?: boolean } = {}) {
+  const tgId = String(tg.id);
+  const name = [tg.first_name, tg.last_name].filter(Boolean).join(" ").slice(0, 60) || "Пользователь Telegram";
   const [existing] = await db.select().from(users).where(eq(users.telegramId, tgId));
   if (existing) {
     if (existing.isBlocked) throw new AppError(403, "blocked", "Аккаунт заблокирован");
     await db
       .update(users)
-      .set({ telegramUsername: data.user.username ?? null, telegramChatAllowed: existing.telegramChatAllowed || !!data.user.allows_write_to_pm })
+      .set({ telegramUsername: tg.username ?? null, telegramChatAllowed: existing.telegramChatAllowed || !!opts.chatAllowed })
       .where(eq(users.id, existing.id));
-    return { user: existing, startParam: data.startParam, isNew: false };
+    return { user: existing, isNew: false };
   }
   const [u] = await db
     .insert(users)
     .values({
       name,
       telegramId: tgId,
-      telegramUsername: data.user.username ?? null,
-      telegramChatAllowed: !!data.user.allows_write_to_pm,
+      telegramUsername: tg.username ?? null,
+      telegramChatAllowed: !!opts.chatAllowed,
       avatarUrl: null, // Telegram photo URLs are short-lived; user can upload their own
       cityId: await defaultCityId(),
     })
     .returning();
-  return { user: u, startParam: data.startParam, isNew: true };
+  return { user: u, isNew: true };
+}
+
+/** Telegram Mini App auth: the signature proves the user; we never trust initDataUnsafe. */
+export async function loginWithTelegram(initData: string) {
+  if (!env.TELEGRAM_BOT_TOKEN) throw new AppError(503, "telegram_disabled", "Вход через Telegram не настроен");
+  const data = verifyInitData(initData, env.TELEGRAM_BOT_TOKEN);
+  if (!data) throw unauthorized("Не удалось проверить данные Telegram");
+  const r = await upsertTelegramUser(data.user, { chatAllowed: !!data.user.allows_write_to_pm });
+  return { ...r, startParam: data.startParam };
 }

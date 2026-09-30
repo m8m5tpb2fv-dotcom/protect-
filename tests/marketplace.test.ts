@@ -18,6 +18,7 @@ import { listMessages, sendChatMessage, startConversation } from "@/server/servi
 import { searchProviders } from "@/server/services/providers";
 import { runAdminAction } from "@/server/services/admin";
 import { activate, cancelInvoice, perks, requestService } from "@/server/billing";
+import { claimTelegramLogin, confirmTelegramLogin, findPendingLogin, parseLoginStartParam, loginStartParam, rejectTelegramLogin, startTelegramLogin } from "@/server/auth/telegram-login";
 import { adClick, pickAd } from "@/server/services/ads";
 import { AppError } from "@/server/http/errors";
 import { resetRateLimits } from "@/server/http/rate-limit";
@@ -209,6 +210,46 @@ describe("permissions", () => {
     await db.update(s.users).set({ role: "moderator" }).where(eq(s.users.id, mod.id));
     const modUser = (await userFromToken((await createSession(mod.id, "email")).token))!;
     await expectAppError(runAdminAction(modUser, { type: "city.toggle", id: cityId, isActive: false }), 403);
+  });
+});
+
+describe("website login via the Telegram bot", () => {
+  it("only the browser holding the nonce gets the session, exactly once", async () => {
+    const r = await startTelegramLogin({ userAgent: "Mozilla/5.0 (iPhone) Safari/604.1", ip: "1.2.3.4" });
+    expect(parseLoginStartParam(loginStartParam(r.token))).toBe(r.token);
+    expect(loginStartParam(r.token).length).toBeLessThanOrEqual(64);
+    expect((await claimTelegramLogin(r.id, r.nonce)).status).toBe("pending");
+    const pending = await findPendingLogin(r.token);
+    expect(pending?.id).toBe(r.id);
+    expect(await findPendingLogin("wrong-token-wrong-token-wrong")).toBeNull();
+
+    const user = await confirmTelegramLogin(r.id, { id: 555001, first_name: "Сайт", username: "site_user" });
+    expect(user?.telegramId).toBe("555001");
+    expect(await confirmTelegramLogin(r.id, { id: 999, first_name: "Чужой" })).toBeNull(); // cannot be re-confirmed
+
+    await expectAppError(claimTelegramLogin(r.id, "someone-elses-nonce"), 403);
+    await expectAppError(claimTelegramLogin(r.id, undefined), 403);
+    const ok = await claimTelegramLogin(r.id, r.nonce);
+    expect(ok).toEqual({ status: "ok", userId: user!.id });
+    expect((await claimTelegramLogin(r.id, r.nonce)).status).toBe("expired"); // single use
+  });
+
+  it("reuses the account of a known Telegram user; rejection and expiry grant nothing", async () => {
+    const a = await startTelegramLogin({});
+    const u1 = await confirmTelegramLogin(a.id, { id: 555001, first_name: "Сайт" });
+    const [row] = await db.select().from(s.users).where(eq(s.users.telegramId, "555001"));
+    expect(u1?.id).toBe(row.id);
+
+    const b = await startTelegramLogin({});
+    await rejectTelegramLogin(b.id);
+    expect((await claimTelegramLogin(b.id, b.nonce)).status).toBe("rejected");
+    expect(await confirmTelegramLogin(b.id, { id: 555001, first_name: "Сайт" })).toBeNull();
+
+    const c = await startTelegramLogin({});
+    await db.update(s.loginRequests).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.loginRequests.id, c.id));
+    expect(await findPendingLogin(c.token)).toBeNull();
+    expect(await confirmTelegramLogin(c.id, { id: 555001, first_name: "Сайт" })).toBeNull();
+    expect((await claimTelegramLogin(c.id, c.nonce)).status).toBe("expired");
   });
 });
 

@@ -4,17 +4,55 @@ import { APP } from "@/config/app";
 import { decodeStartParam } from "@/lib/deeplink";
 import { db } from "../db";
 import { users } from "../db/schema";
-import { sendMessage, webAppUrl } from "./bot";
+import { answerCallback, editMessage, escapeHtml, sendMessage, webAppUrl } from "./bot";
+import { confirmTelegramLogin, describeDevice, findPendingLogin, parseLoginStartParam, rejectTelegramLogin } from "../auth/telegram-login";
 
+type TgUser = { id: number; first_name: string; last_name?: string; username?: string; is_bot?: boolean };
 type Update = {
   update_id: number;
-  message?: { message_id: number; text?: string; chat: { id: number; type: string }; from?: { id: number; first_name: string; username?: string } };
+  message?: { message_id: number; text?: string; chat: { id: number; type: string }; from?: TgUser };
   my_chat_member?: { chat: { id: number }; from: { id: number }; new_chat_member: { status: string } };
+  callback_query?: { id: string; from: TgUser; data?: string; message?: { message_id: number; chat: { id: number } } };
 };
+
+const fmtTime = (d: Date) => d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Saratov" });
+
+/** «Войти через Telegram» on the website: show the request and ask for an explicit confirmation. */
+async function askLoginConfirmation(chatId: number, token: string) {
+  const r = await findPendingLogin(token);
+  if (!r) {
+    await sendMessage(chatId, "Ссылка для входа устарела. Вернитесь на сайт и нажмите «Войти через Telegram» ещё раз.");
+    return;
+  }
+  await sendMessage(
+    chatId,
+    `<b>Вход на сайт ${escapeHtml(APP.name)}</b>\n\nЗапрос в ${fmtTime(r.createdAt)} с устройства: ${escapeHtml(describeDevice(r.userAgent))}.\n\nПодтверждайте, только если вы сами нажали «Войти через Telegram» на сайте. Если ссылку прислал кто-то другой — нажмите «Это не я».`,
+    { inline_keyboard: [[{ text: "✅ Войти", callback_data: `login:${r.id}` }, { text: "Это не я", callback_data: `nologin:${r.id}` }]] },
+  );
+}
+
+async function handleCallback(q: NonNullable<Update["callback_query"]>) {
+  const [action, id] = (q.data ?? "").split(":");
+  const valid = !!id && /^[0-9a-f-]{36}$/.test(id) && !q.from.is_bot;
+  let reply = "Запрос устарел";
+  let text: string | null = null;
+  if (valid && action === "login") {
+    const user = await confirmTelegramLogin(id, q.from);
+    reply = user ? "Готово" : reply;
+    text = user ? "✅ Вход подтверждён. Вернитесь в браузер — сайт откроется сам." : "Ссылка для входа устарела. Нажмите «Войти через Telegram» на сайте ещё раз.";
+  } else if (valid && action === "nologin") {
+    await rejectTelegramLogin(id);
+    reply = "Вход отклонён";
+    text = "Вход отклонён. Никто не получил доступ к вашему аккаунту.";
+  }
+  await answerCallback(q.id, reply);
+  if (text && q.message) await editMessage(q.message.chat.id, q.message.message_id, text);
+}
 
 const openBtn = (text: string, path: string) => ({ inline_keyboard: [[{ text, web_app: { url: webAppUrl(path) } }]] });
 
 export async function handleUpdate(u: Update) {
+  if (u.callback_query) return handleCallback(u.callback_query);
   if (u.my_chat_member) {
     const blocked = u.my_chat_member.new_chat_member.status === "kicked";
     await db.update(users).set({ telegramChatAllowed: !blocked }).where(eq(users.telegramId, String(u.my_chat_member.from.id)));
@@ -28,6 +66,8 @@ export async function handleUpdate(u: Update) {
 
   switch (cmd) {
     case "/start": {
+      const loginToken = parseLoginStartParam(payload);
+      if (loginToken) return askLoginConfirmation(m.chat.id, loginToken);
       const path = decodeStartParam(payload) ?? "/";
       const text =
         path === "/"

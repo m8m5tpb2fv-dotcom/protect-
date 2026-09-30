@@ -30,6 +30,14 @@ export function sendMessage(chatId: string | number, text: string, markup?: Repl
   return tg("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: markup });
 }
 
+export function answerCallback(callbackQueryId: string, text?: string) {
+  return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
+}
+
+export function editMessage(chatId: number, messageId: number, text: string) {
+  return tg("editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML" });
+}
+
 /** Absolute URL of a page inside the web app (used for Mini App web_app buttons). */
 export function webAppUrl(path = "/") {
   return new URL(path, env.APP_URL).toString();

@@ -120,6 +120,28 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
+/**
+ * "Войти через Telegram" on the website: the browser gets a one-time link to the bot,
+ * the user confirms inside Telegram, the same browser (proven by a nonce cookie) receives a session.
+ * Only hashes of the link token and the browser nonce are stored.
+ */
+export const loginRequests = pgTable(
+  "login_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    nonceHash: text("nonce_hash").notNull(),
+    status: text("status").notNull().default("pending"), // pending | confirmed | used | rejected
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+    expiresAt: ts("expires_at").notNull(),
+    confirmedAt: ts("confirmed_at"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("login_requests_token_idx").on(t.tokenHash)],
+);
+
 export const otpCodes = pgTable(
   "otp_codes",
   {
@@ -719,3 +741,4 @@ export type Review = typeof reviews.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type Ad = typeof ads.$inferSelect;
+export type LoginRequest = typeof loginRequests.$inferSelect;
