@@ -45,3 +45,5 @@ next-env.d.ts
 /storage/
 /test-results/
 /screenshots/tmp/
+marketing/reel/reel.html
+*.mp4
