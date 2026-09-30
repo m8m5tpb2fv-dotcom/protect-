@@ -2,13 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { MapPinned } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { createMap, type MapAdapter, type MapCircle, type MapMarker } from "./adapters";
+import { createMap, lastMapDiagnostics, type MapAdapter, type MapCircle, type MapDiagnostics, type MapMarker } from "./adapters";
 
 /** Provider-agnostic map. Renders nothing heavy until visible. */
 export function MapView({ center, zoom = 12, markers = [], circles = [], onMarkerClick, className, fit }: { center: [number, number]; zoom?: number; markers?: MapMarker[]; circles?: MapCircle[]; onMarkerClick?: (id: string) => void; className?: string; fit?: boolean }) {
   const el = useRef<HTMLDivElement>(null);
   const adapter = useRef<MapAdapter | null>(null);
   const [state, setState] = useState<"idle" | "ready" | "error">("idle");
+  const [diag, setDiag] = useState<MapDiagnostics | null>(null);
   const clickRef = useRef(onMarkerClick);
   useEffect(() => {
     clickRef.current = onMarkerClick;
@@ -28,6 +29,7 @@ export function MapView({ center, zoom = 12, markers = [], circles = [], onMarke
           if (cancelled) return a.destroy();
           adapter.current = a;
           setState("ready");
+          if (new URLSearchParams(window.location.search).has("mapdebug")) setDiag(lastMapDiagnostics);
         } catch {
           setState("error");
         }
@@ -53,6 +55,12 @@ export function MapView({ center, zoom = 12, markers = [], circles = [], onMarke
   return (
     <div className={cn("relative isolate overflow-hidden rounded-[var(--radius-card)] bg-surface-2", className)}>
       <div ref={el} className="absolute inset-0 z-0" role="region" aria-label="Карта" />
+      {diag && (
+        <p className="absolute inset-x-2 top-2 z-[1000] rounded-xl bg-black/80 p-2 font-mono text-[11px] leading-snug text-white">
+          карта: {diag.requested} → {diag.used}
+          {diag.reason ? ` · ${diag.reason}` : " · ok"}
+        </p>
+      )}
       {state !== "ready" && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted">
           <MapPinned className="h-7 w-7" strokeWidth={1.6} />

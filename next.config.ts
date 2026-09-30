@@ -12,14 +12,15 @@ const isProd = process.env.NODE_ENV === "production";
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${isProd ? "" : "'unsafe-eval'"} https://telegram.org https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yastatic.net https://mapgl.2gis.com`,
+  `script-src 'self' 'unsafe-inline' ${isProd ? "" : "'unsafe-eval'"} https://telegram.org https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://*.maps.yandex.net https://yandex.ru https://yastatic.net https://mapgl.2gis.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "media-src 'self' blob: https:",
   "connect-src 'self' https: wss:",
   "worker-src 'self' blob:",
-  "frame-src 'self'",
+  "child-src 'self' blob:",
+  "frame-src 'self' https://api-maps.yandex.ru https://*.yandex.ru",
   "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
   "base-uri 'self'",
   "form-action 'self'",

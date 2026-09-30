@@ -149,12 +149,30 @@ async function dgis(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   };
 }
 
+/** Why the configured provider was not used (shown with ?mapdebug=1). */
+export type MapDiagnostics = { requested: MapProviderId; used: MapProviderId; reason: string | null };
+export let lastMapDiagnostics: MapDiagnostics | null = null;
+
 export async function createMap(el: HTMLElement, o: MapOptions, provider: MapProviderId = MAP_PROVIDER): Promise<MapAdapter> {
+  // collect CSP blocks of the provider's resources — the most common silent failure
+  const blocked: string[] = [];
+  const onCsp = (e: SecurityPolicyViolationEvent) => blocked.push(`${e.effectiveDirective} ${e.blockedURI}`);
+  document.addEventListener("securitypolicyviolation", onCsp);
   try {
-    if (provider === "yandex") return await yandex(el, o);
-    if (provider === "2gis") return await dgis(el, o);
+    if (provider === "yandex") return await withDiag(provider, yandex(el, o));
+    if (provider === "2gis") return await withDiag(provider, dgis(el, o));
   } catch (e) {
-    console.warn("[map] provider failed, falling back to leaflet", e);
+    console.warn("[map] provider failed, falling back to leaflet", e, blocked);
+    lastMapDiagnostics = { requested: provider, used: "leaflet", reason: [e instanceof Error ? e.message : String(e), ...blocked.slice(0, 3)].join(" · ") };
+  } finally {
+    document.removeEventListener("securitypolicyviolation", onCsp);
   }
+  if (provider === "leaflet") lastMapDiagnostics = { requested: provider, used: "leaflet", reason: null };
   return leaflet(el, o);
+}
+
+async function withDiag(provider: MapProviderId, p: Promise<MapAdapter>) {
+  const a = await p;
+  lastMapDiagnostics = { requested: provider, used: provider, reason: null };
+  return a;
 }
