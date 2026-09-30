@@ -39,19 +39,27 @@ export const PLANS = {
 
 /**
  * Subscriptions paid with Telegram Stars (currency XTR) — Telegram's required method for digital goods in bots.
- * «Продвижение»: crown badge, instant Telegram cards about new orders nearby, higher place in search
- * (marked «Реклама») and a work video at the top of the profile.
+ * «Продвижение» buys one thing: instant Telegram cards about new orders nearby. It changes nothing in search,
+ * badges or the profile; trust marks (the crown included) come only from moderation.
  */
 export const STAR_PLANS = {
   promo_month: {
     id: "promo_month",
     channel: "promotion",
     title: "Продвижение",
-    description: "👑 Корона в профиле, мгновенные уведомления о новых заявках в Telegram, место выше в поиске и видео работы в шапке профиля.",
-    stars: 100,
+    description: "Быстрые уведомления о новых заявках рядом с вами — прямо в Telegram.",
+    features: [
+      "Новая заявка рядом приходит вам в Telegram сразу, в момент создания",
+      "В сообщении — что нужно сделать, район, расстояние, срочность и бюджет",
+      "Кнопка «Откликнуться» прямо в сообщении — вы отвечаете клиенту первым",
+    ],
+    stars: 500,
     periodDays: 30,
   },
 } as const;
+
+/** What a provider without «Продвижение» keeps — shown next to the offer so nobody thinks orders are paywalled. */
+export const PROMOTION_FREE_NOTE = "Без продвижения все заявки видны в приложении, и откликаться на них можно бесплатно.";
 
 /** Legacy per-period promotions, paid by invoice. Kept for existing records; no longer offered. */
 export const PROMOTIONS = {

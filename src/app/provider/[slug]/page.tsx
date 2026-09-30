@@ -26,7 +26,6 @@ import { dateShort, pl, rating, responseTime, rub, VERIFICATION } from "@/lib/fo
 import { formatPhone } from "@/lib/phone";
 import { telegramLink } from "@/server/telegram/config";
 import { cn } from "@/lib/cn";
-import { Crown } from "@/components/domain/crown";
 
 const DAYS = [["mon", "Пн"], ["tue", "Вт"], ["wed", "Ср"], ["thu", "Чт"], ["fri", "Пт"], ["sat", "Сб"], ["sun", "Вс"]] as const;
 
@@ -121,7 +120,6 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
           <h1 className="inline-flex flex-wrap items-center justify-center gap-2 text-[28px] font-semibold tracking-[-0.03em] md:text-[36px]">
             {p.displayName}
             <VerifiedMark level={p.verification} size={18} className="[&>span]:bg-white [&>span]:text-black" />
-            <Crown show={p.hasCrown} size={24} />
           </h1>
           <p className="mx-auto mt-1.5 max-w-md text-[15px] leading-snug text-white/60">{p.headline}</p>
           {provider.status !== "active" && (
@@ -148,11 +146,6 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
 
       <div className="px-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-10 lg:px-0">
         <div className="min-w-0">
-          {p.hasCrown && provider.promoVideoUrl && (
-            <section aria-label="Видео работы" className="mt-5">
-              <video src={provider.promoVideoUrl} controls playsInline muted preload="metadata" className="aspect-video w-full rounded-[28px] bg-black object-contain" />
-            </section>
-          )}
           <section className="mt-5">
             <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
               <span className="inline-flex h-8 items-center gap-1.5 rounded-full bezel px-3 text-[13.5px] font-semibold">

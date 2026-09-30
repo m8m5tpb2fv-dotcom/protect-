@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Crown } from "./crown";
 import { Zap } from "lucide-react";
 import type { ProviderCard as Card } from "@/server/services/providers";
 import { cn } from "@/lib/cn";
@@ -43,7 +42,6 @@ export function ProviderCard({ p, favorite = false, className, actions, priority
               {p.displayName}
             </Link>
             <VerifiedMark level={p.verification} size={15} className="[&>span]:bg-white [&>span]:text-black" />
-            <Crown show={p.hasCrown} size={17} />
           </h3>
           <p className="mt-0.5 truncate text-[13.5px] text-white/70">
             {p.subName}
@@ -96,7 +94,6 @@ export function ProviderRow({ p, favorite = false, className }: { p: Card; favor
                 {p.displayName}
               </Link>
               <VerifiedMark level={p.verification} size={13} />
-              <Crown show={p.hasCrown} size={14} />
             </h3>
             <p className="truncate text-[13.5px] text-muted">{p.subName}</p>
           </div>

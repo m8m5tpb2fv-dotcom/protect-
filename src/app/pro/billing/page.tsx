@@ -5,10 +5,10 @@ import { pageProvider } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { providers } from "@/server/db/schema";
 import { anyChannelOn, offers, perks, providerInvoices } from "@/server/billing";
-import { FREE_FOREVER, getProduct } from "@/config/monetization";
+import { FREE_FOREVER, PROMOTION_FREE_NOTE, STAR_PLANS, getProduct } from "@/config/monetization";
 import { Badge } from "@/components/ui/badge";
 import { dateShort, rub } from "@/lib/format";
-import { CancelRequest, PromoVideo, RequestService, StarsCheckout } from "./request";
+import { CancelRequest, RequestService, StarsCheckout } from "./request";
 
 export const metadata: Metadata = { title: "Продвижение", robots: { index: false } };
 
@@ -53,7 +53,23 @@ export default async function BillingPage() {
               <h2 className="text-[18px] font-semibold tracking-[-0.02em]">{c.title}</h2>
               {c.active && <Badge tone="accent">Активно</Badge>}
             </div>
-            <p className="mt-2 flex-1 text-[14px] text-muted">{c.description}</p>
+            <p className="mt-2 text-[14px] text-muted">{c.description}</p>
+            {c.id in STAR_PLANS ? (
+              <div className="mt-3 flex-1">
+                <p className="text-[13px] font-semibold text-ink">Что даёт покупка</p>
+                <ul className="mt-1.5 grid gap-1.5 text-[14px] text-ink-2">
+                  {STAR_PLANS[c.id as keyof typeof STAR_PLANS].features.map((f) => (
+                    <li key={f} className="flex gap-2">
+                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 rounded-2xl bg-surface-2 p-3 text-[13px] text-muted">{PROMOTION_FREE_NOTE} Место в поиске и значки профиля от продвижения не зависят.</p>
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
             <p className="mt-4 text-[28px] font-semibold tracking-[-0.04em] tabular">
               {price(c.price, c.currency)}
               {c.kind === "subscription" && <span className="text-[14px] font-medium text-muted"> / 30 дней</span>}
@@ -67,14 +83,6 @@ export default async function BillingPage() {
           </section>
         ))}
       </div>
-
-      {perk.promo && (
-        <section className="rounded-[28px] bezel p-5">
-          <h2 className="title text-[20px]">Видео работы</h2>
-          <p className="mt-1 text-[14px] text-muted">Покажите, как вы работаете: видео появится первым на странице вашего профиля, пока действует «Продвижение».</p>
-          <PromoVideo url={p.promoVideoUrl} />
-        </section>
-      )}
 
       <p className="rounded-[22px] bg-surface-2 p-4 text-[13.5px] text-muted">
         «Продвижение» оплачивается звёздами Telegram и включается сразу после оплаты. Вопросы по оплате и возвраты — командой /paysupport в нашем боте. Деньги за работу клиенты по-прежнему платят вам напрямую, без комиссии.

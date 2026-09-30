@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, uploadFile } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/field";
@@ -99,7 +99,7 @@ export function StarsCheckout({ productId, label, active, disabled }: { productI
   useEffect(() => {
     if (!waiting) return;
     if (active && !wasActive.current) {
-      toast("Продвижение подключено 👑");
+      toast("Продвижение подключено ⚡");
       setWaiting(false);
       return;
     }
@@ -147,67 +147,5 @@ export function StarsCheckout({ productId, label, active, disabled }: { productI
       </Button>
       {waiting && <p className="mt-2 text-center text-[13px] text-muted">Ждём подтверждение оплаты от Telegram…</p>}
     </>
-  );
-}
-
-/** Work video shown at the top of the profile while «Продвижение» is active. */
-export function PromoVideo({ url }: { url: string | null }) {
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
-  const router = useRouter();
-  const input = useRef<HTMLInputElement>(null);
-  const save = async (next: string | null) => {
-    await api("/api/provider/promo-video", { method: "PUT", body: { url: next } });
-    router.refresh();
-  };
-  return (
-    <div className="mt-3">
-      {url && <video src={url} controls playsInline muted preload="metadata" className="mb-3 aspect-video w-full rounded-[22px] bg-black object-contain" />}
-      <input
-        ref={input}
-        type="file"
-        accept="video/mp4,video/webm,video/quicktime"
-        hidden
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          setBusy(true);
-          try {
-            const r = await uploadFile(file, "promo");
-            await save(r.url);
-            toast("Видео добавлено в профиль");
-          } catch (err) {
-            toast((err as Error).message, "error");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" loading={busy} onClick={() => input.current?.click()}>
-          {url ? "Заменить видео" : "Загрузить видео"}
-        </Button>
-        {url && (
-          <Button
-            variant="ghost"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await save(null);
-              } catch (err) {
-                toast((err as Error).message, "error");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Убрать
-          </Button>
-        )}
-      </div>
-      <p className="mt-2 text-[12.5px] text-muted">MP4 или WebM, до 60 МБ. Лучше горизонтальное, 15–60 секунд.</p>
-    </div>
   );
 }

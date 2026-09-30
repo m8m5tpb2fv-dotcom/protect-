@@ -50,6 +50,13 @@
       "when": 1790801355546,
       "tag": "0006_promotion_stars",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790802578846,
+      "tag": "0007_drop_promo_video",
+      "breakpoints": true
     }
   ]
 }

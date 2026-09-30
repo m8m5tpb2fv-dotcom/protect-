@@ -262,9 +262,8 @@ export const providers = pgTable(
     proUntil: ts("pro_until"),
     boostedUntil: ts("boosted_until"),
     highlightedUntil: ts("highlighted_until"),
-    /** «Продвижение» subscription (Telegram Stars): crown, instant order cards, higher in search, promo video. */
+    /** «Продвижение» subscription (Telegram Stars): instant Telegram cards about new orders nearby. */
     promoUntil: ts("promo_until"),
-    promoVideoUrl: text("promo_video_url"),
     searchText: text("search_text").notNull().default(""),
     createdAt: createdAt(),
     approvedAt: ts("approved_at"),

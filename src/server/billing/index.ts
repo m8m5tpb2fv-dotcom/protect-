@@ -34,18 +34,17 @@ export function enabledChannels(): Channel[] {
   return [...enabled()];
 }
 
-type PerkSource = { proUntil: Date | null; boostedUntil: Date | null; highlightedUntil: Date | null; promoUntil: Date | null };
+type PerkSource = { proUntil: Date | null; boostedUntil: Date | null; highlightedUntil: Date | null; promoUntil?: Date | null };
 
 const live = (d: Date | null, now: number) => !!d && d.getTime() > now;
 
 /** Paid perks currently in effect. A switched-off channel neutralises its perks immediately. */
 export function perks(p: PerkSource, now = Date.now()) {
-  const promo = channelOn("promotion") && live(p.promoUntil, now);
   return {
     pro: channelOn("pro") && live(p.proUntil, now),
-    /** «Продвижение» subscription: crown, instant order cards, promo video. */
-    promo,
-    boosted: promo || (channelOn("promotion") && live(p.boostedUntil, now)),
+    /** «Продвижение» subscription: instant Telegram cards about new orders nearby (nothing else). */
+    promo: channelOn("promotion") && live(p.promoUntil ?? null, now),
+    boosted: channelOn("promotion") && live(p.boostedUntil, now),
     highlighted: channelOn("promotion") && live(p.highlightedUntil, now),
   };
 }
@@ -232,24 +231,4 @@ export async function completeStarsPayment(p: StarsPayment & { chargeId: string 
     return null;
   }
   return activate(r.inv.id, null, p.chargeId);
-}
-
-/* ---------------------------------------------------------------- «Продвижение» video */
-
-/** Only a video this user uploaded with purpose "promo" (see storage/upload.ts key layout). */
-export function isOwnPromoVideo(userId: string, url: string) {
-  const re = new RegExp(`^/files/promo/${userId.slice(0, 8)}/[0-9a-f-]{36}\\.(mp4|webm)$`);
-  return re.test(url);
-}
-
-/** Sets or removes the work video shown at the top of the profile. Setting requires an active subscription. */
-export async function setPromoVideo(user: CurrentUser, url: string | null) {
-  if (!user.provider) throw forbidden("Доступно исполнителям");
-  if (url !== null) {
-    const [p] = await db.select().from(providers).where(eq(providers.id, user.provider.id));
-    if (!perks(p).promo) throw forbidden("Видео в шапке профиля доступно с «Продвижением»");
-    if (!isOwnPromoVideo(user.id, url)) throw badRequest("Недопустимый адрес видео");
-  }
-  await db.update(providers).set({ promoVideoUrl: url }).where(eq(providers.id, user.provider.id));
-  return { promoVideoUrl: url };
 }
