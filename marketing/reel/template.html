@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Рядом — Reels</title>
+<style>
+@font-face{font-family:Inter;font-weight:100 900;src:url(data:font/woff2;base64,__CYR__) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Inter;font-weight:100 900;src:url(data:font/woff2;base64,__LAT__) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Inter;font-weight:100 900;src:url(data:font/woff2;base64,__LATEXT__) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+:root{--lime:#d4f25c;--ink:#0b0b0c;--glass:rgba(255,255,255,.065);--line:rgba(255,255,255,.11)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;background:var(--ink);overflow:hidden}
+body{font-family:Inter,system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11"}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--ink)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
+.c{position:absolute;left:540px;top:960px;width:0;height:0}
+.c>*{position:absolute;left:0;top:0;transform:translate(-50%,-50%)}
+.tx{font-weight:800;letter-spacing:-.045em;line-height:1;white-space:nowrap}
+.lime{color:var(--lime)}
+/* background */
+#glow{position:absolute;width:1500px;height:1500px;left:-210px;top:210px;border-radius:50%;background:radial-gradient(circle,rgba(212,242,92,.17) 0%,rgba(212,242,92,.05) 35%,transparent 65%)}
+#glow2{position:absolute;width:1100px;height:1100px;left:300px;top:-300px;border-radius:50%;background:radial-gradient(circle,rgba(120,140,255,.10) 0%,transparent 60%)}
+#dots{position:absolute;left:-80px;top:-80px;width:1240px;height:2080px;background-image:radial-gradient(rgba(255,255,255,.075) 1.3px,transparent 1.6px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 50%,#000 30%,transparent 85%)}
+#vignette{position:absolute;inset:0;background:radial-gradient(ellipse 85% 70% at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);pointer-events:none}
+/* scene 1 */
+#slot{height:176px;width:1000px;overflow:hidden;text-align:center}
+#slot .stack>div{height:176px;display:flex;align-items:center;justify-content:center}
+.chip{display:flex;align-items:center;gap:16px;height:104px;padding:0 42px 0 30px;border-radius:52px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);backdrop-filter:blur(20px);font-size:44px;font-weight:700;letter-spacing:-.03em;white-space:nowrap;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.chip i{width:46px;height:46px;border-radius:50%;background:var(--lime);display:grid;place-items:center}
+.chip i svg{width:26px;height:26px}
+/* logo */
+.tile{width:200px;height:200px;border-radius:62px;background:var(--lime);display:grid;place-items:center;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 80px rgba(212,242,92,.28)}
+.tile svg{width:78%;height:78%}
+.word{font-size:128px;font-weight:800;letter-spacing:-.05em;line-height:1;display:flex}
+.word span{display:inline-block;will-change:transform,opacity,filter}
+/* map */
+#map{position:absolute;left:-160px;top:-240px;width:1400px;height:2400px}
+#mapmask{position:absolute;inset:0;-webkit-mask-image:radial-gradient(ellipse 62% 48% at 50% 54%,#000 45%,transparent 92%)}
+.pill{height:70px;padding:0 26px;border-radius:35px;background:#fff;color:var(--ink);font-size:32px;font-weight:750;letter-spacing:-.02em;display:flex;align-items:center;white-space:nowrap;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.pill::after{content:"";position:absolute;left:50%;bottom:-9px;width:18px;height:18px;background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:3px}
+.dot{width:26px;height:26px;border-radius:50%;background:#fff;border:6px solid #2b2d31;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+.me{width:44px;height:44px;border-radius:50%;background:var(--lime);border:7px solid #fff;box-shadow:0 0 0 10px rgba(212,242,92,.18),0 10px 30px rgba(0,0,0,.5)}
+.ring{width:100px;height:100px;border-radius:50%;border:3px solid rgba(212,242,92,.7)}
+.kmring{border-radius:50%;border:2px dashed rgba(255,255,255,.12)}
+.kmlabel{white-space:nowrap;font-size:26px;font-weight:650;color:rgba(255,255,255,.4);letter-spacing:-.01em}
+/* cards */
+.card{width:920px;height:196px;border-radius:48px;background:linear-gradient(180deg,rgba(255,255,255,.095),rgba(255,255,255,.045));border:1.5px solid rgba(255,255,255,.12);backdrop-filter:blur(28px) saturate(140%);box-shadow:0 30px 70px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);display:flex;align-items:center;gap:30px;padding:0 40px 0 34px}
+.av{width:124px;height:124px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:48px;font-weight:750;letter-spacing:-.03em;color:#0b0b0c}
+.meta{flex:1;min-width:0}
+.nm{font-size:50px;font-weight:750;letter-spacing:-.035em;line-height:1.05}
+.cat{font-size:30px;color:rgba(255,255,255,.55);font-weight:500;letter-spacing:-.015em;margin-top:6px}
+.row{display:flex;gap:16px;margin-top:14px;align-items:center}
+.rt{display:flex;align-items:center;gap:8px;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.rt svg{width:30px;height:30px}
+.km{height:48px;padding:0 18px;border-radius:24px;background:rgba(212,242,92,.14);color:var(--lime);font-size:29px;font-weight:700;display:flex;align-items:center;letter-spacing:-.01em}
+.pr{text-align:right;flex:none}
+.pr small{display:block;font-size:28px;color:rgba(255,255,255,.5);font-weight:500;letter-spacing:-.01em}
+.pr b{display:block;font-size:50px;font-weight:800;letter-spacing:-.04em;margin-top:2px}
+.hl{position:absolute;inset:-3px;border-radius:51px;border:3px solid var(--lime);opacity:0}
+/* sort control */
+#sort{width:900px;height:104px;border-radius:52px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);backdrop-filter:blur(20px);display:flex;padding:8px;position:relative}
+#sort .seg{flex:1;display:grid;place-items:center;font-size:36px;font-weight:700;letter-spacing:-.025em;position:relative;z-index:1;color:rgba(255,255,255,.7)}
+#sortInd{position:absolute;top:8px;left:8px;width:434px;height:86px;border-radius:44px;background:var(--lime)}
+/* connect */
+#btn{width:920px;height:156px;border-radius:78px;background:var(--lime);color:var(--ink);font-size:54px;font-weight:800;letter-spacing:-.035em;display:grid;place-items:center;overflow:hidden;box-shadow:0 30px 80px rgba(212,242,92,.3)}
+#btnRipple{position:absolute;left:50%;top:50%;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.55);transform:translate(-50%,-50%) scale(0)}
+.node{width:170px;height:170px;border-radius:50%;display:grid;place-items:center;font-size:60px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.nodelabel{font-size:40px;font-weight:700;letter-spacing:-.03em;white-space:nowrap}
+.bubble{max-width:620px;padding:30px 40px;border-radius:44px;font-size:40px;font-weight:600;letter-spacing:-.025em;line-height:1.2;white-space:nowrap;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.bubble.a{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.14);backdrop-filter:blur(20px);border-bottom-left-radius:14px}
+.bubble.b{background:var(--lime);color:var(--ink);border-bottom-right-radius:14px}
+.free{height:96px;padding:0 44px;border-radius:48px;border:2px solid rgba(212,242,92,.55);background:rgba(212,242,92,.1);color:var(--lime);font-size:46px;font-weight:750;letter-spacing:-.03em;display:flex;align-items:center;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg" class="abs" style="width:1080px;height:1920px">
+    <div id="glow"></div><div id="glow2"></div><div id="dots"></div>
+  </div>
+
+  <!-- MAP -->
+  <div id="mapwrap" class="abs" style="width:1080px;height:1920px">
+    <div id="mapmask"><svg id="map" viewBox="0 0 1400 2400"></svg></div>
+    <div id="mapfx" class="abs" style="width:1080px;height:1920px"></div>
+  </div>
+  <svg id="links" class="abs" width="1080" height="1920" viewBox="0 0 1080 1920" style="overflow:visible"></svg>
+  <div id="pins" class="abs" style="width:1080px;height:1920px"></div>
+
+  <!-- SCENE 1 -->
+  <div class="c" id="s1">
+    <div id="h1" class="tx" style="font-size:156px">НУЖЕН</div>
+    <div id="slot" class="tx lime" style="font-size:156px"><div class="stack" id="stack">
+      <div>МАСТЕР?</div><div>РЕМОНТ</div><div>АВТО</div><div>КРАСОТА</div><div>IT</div><div>ДОМ</div>
+    </div></div>
+  </div>
+  <div class="c" id="chips"></div>
+
+  <!-- headings -->
+  <div class="c" id="heads"></div>
+
+  <!-- SCENE 3 -->
+  <div class="c"><div id="sort"><div id="sortInd"></div><div class="seg" id="segA">По расстоянию</div><div class="seg" id="segB">По рейтингу</div></div></div>
+  <div class="c" id="cards"></div>
+
+  <!-- SCENE 4 -->
+  <svg id="conn" class="abs" width="1080" height="1920" viewBox="0 0 1080 1920" style="overflow:visible"></svg>
+  <div class="c" id="s4"></div>
+
+  <!-- brand mark (header) + final lockup -->
+  <div class="c" id="brand"></div>
+
+  <div id="vignette"></div>
+</div>
+
+<script>
+const LOGO = `__LOGO__`;
+const STAR = '<svg viewBox="0 0 24 24"><path fill="#d4f25c" d="M12 2.6l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8l-5.8 3.3 1.4-6.4-4.9-4.4 6.5-.7z"/></svg>';
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const P = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eOut5 = (x) => 1 - Math.pow(1 - x, 5);
+const eIn = (x) => x * x * x;
+const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const lerp = (a, b, x) => a + (b - a) * x;
+/** damped spring 0→1 (slight overshoot), settles in ~0.7 s */
+const spring = (t, a, k = 7, w = 12) => (t <= a ? 0 : 1 - Math.exp(-k * (t - a)) * Math.cos(w * (t - a)));
+function S(el, { x = 0, y = 0, s = 1, sx, sy, o = 1, r = 0, blur = 0 } = {}) {
+  const sc = sx != null ? `scale(${sx},${sy})` : `scale(${s})`;
+  el.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px) ${sc} rotate(${r}deg)`;
+  el.style.opacity = clamp(o);
+  el.style.filter = blur > 0.08 ? `blur(${blur.toFixed(2)}px)` : "none";
+  el.style.visibility = o <= 0.001 ? "hidden" : "visible";
+}
+function make(parent, html) {
+  const d = document.createElement("div");
+  d.innerHTML = html.trim();
+  const el = d.firstChild;
+  parent.appendChild(el);
+  return el;
+}
+const svgNS = "http://www.w3.org/2000/svg";
+function svgEl(parent, tag, attrs) {
+  const e = document.createElementNS(svgNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  parent.appendChild(e);
+  return e;
+}
+/** in/out envelope: spring in at a, ease out between b..c */
+function inOut(t, a, b, c, dy = 70) {
+  const i = spring(t, a, 8, 11);
+  const out = eIn(P(t, b, c));
+  return { y: (1 - i) * dy - out * 60, o: clamp((t - a) / 0.25) * (1 - out), blur: (1 - clamp((t - a) / 0.3)) * 16 + out * 14, s: 1 - out * 0.06 };
+}
+
+/* ---------- background ---------- */
+const glow = $("glow"), glow2 = $("glow2"), dots = $("dots");
+
+/* ---------- scene 1 ---------- */
+const h1 = $("h1"), slot = $("slot"), stack = $("stack");
+const CATS = [
+  ["Ремонт", '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linejoin="round"/>', -250, -560, -8],
+  ["Авто", '<path d="M5 16h14M6.5 16l1.6-5.2A2 2 0 0 1 10 9.4h4a2 2 0 0 1 1.9 1.4L17.5 16M5 16v2.5M19 16v2.5" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linecap="round"/><circle cx="8" cy="16" r="1.2" fill="#0b0b0c"/><circle cx="16" cy="16" r="1.2" fill="#0b0b0c"/>', 270, -330, 7],
+  ["Красота", '<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z" fill="#0b0b0c"/>', -230, 300, 6],
+  ["IT", '<path d="M8.5 8L4.5 12l4 4M15.5 8l4 4-4 4M13.5 5.5l-3 13" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>', 290, 470, -6],
+  ["Дом", '<path d="M4 11.5L12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" fill="none" stroke="#0b0b0c" stroke-width="2.4" stroke-linejoin="round"/>', 30, 700, 4],
+];
+const chips = CATS.map(([n, icon, x, y, r]) => ({ el: make($("chips"), `<div class="chip"><i><svg viewBox="0 0 24 24">${icon}</svg></i>${n}</div>`), x, y, r }));
+
+/* ---------- brand ---------- */
+const tile = make($("brand"), `<div class="tile">${LOGO}</div>`);
+const word = make($("brand"), `<div class="word">${[..."Рядом"].map((c) => `<span>${c}</span>`).join("")}</div>`);
+const wordFinal = make($("brand"), `<div class="word" style="font-size:150px;letter-spacing:-.02em">${[..."РЯДОМ"].map((c) => `<span>${c}</span>`).join("")}</div>`);
+const tagline = make($("brand"), `<div style="font-size:54px;font-weight:600;letter-spacing:-.035em;color:rgba(255,255,255,.72);white-space:nowrap">Услуги рядом с тобой</div>`);
+const free = make($("brand"), `<div class="free">Бесплатно. Без комиссии.</div>`);
+const miniBrand = make($("brand"), `<div style="display:flex;align-items:center;gap:20px"><div class="tile" style="width:76px;height:76px;border-radius:24px;box-shadow:none">${LOGO}</div><div style="font-size:52px;font-weight:800;letter-spacing:-.05em">Рядом</div></div>`);
+const flash = make($("brand"), `<div style="width:220px;height:220px;border-radius:50%;border:4px solid rgba(212,242,92,.8)"></div>`);
+
+/* ---------- headings ---------- */
+const head = (html) => make($("heads"), `<div class="tx" style="font-size:118px;text-align:center">${html}</div>`);
+const hFind = head('Найди <span class="lime">рядом</span>');
+const hCompare = head('Сравнивай <span class="lime">цены</span>');
+const hDeal = make($("heads"), `<div class="tx" style="font-size:104px;text-align:center;line-height:1.02">Договорись<br><span class="lime">напрямую</span></div>`);
+
+/* ---------- map ---------- */
+(function buildMap() {
+  const m = $("map");
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  svgEl(m, "rect", { x: 0, y: 0, width: 1400, height: 2400, fill: "#101113" });
+  // parks
+  for (const [x, y, w, h] of [[120, 420, 300, 220], [880, 1480, 320, 260], [300, 1720, 260, 200], [820, 560, 220, 300]]) svgEl(m, "rect", { x, y, width: w, height: h, rx: 60, fill: "#12180f" });
+  // river (Volga-like band on the east)
+  svgEl(m, "path", { d: "M1180 -40 C 1060 420, 1330 760, 1150 1180 S 1010 1900, 1260 2460", stroke: "#0f1a22", "stroke-width": 230, fill: "none", "stroke-linecap": "round" });
+  svgEl(m, "path", { d: "M1180 -40 C 1060 420, 1330 760, 1150 1180 S 1010 1900, 1260 2460", stroke: "#132230", "stroke-width": 150, fill: "none", "stroke-linecap": "round" });
+  // minor grid
+  for (let i = 0; i < 26; i++) {
+    const x = 40 + i * 56 + rnd() * 20;
+    svgEl(m, "path", { d: `M${x} 0 L${x + 90 - rnd() * 180} 2400`, stroke: "#18191c", "stroke-width": 5, fill: "none" });
+  }
+  for (let i = 0; i < 44; i++) {
+    const y = 20 + i * 56 + rnd() * 20;
+    svgEl(m, "path", { d: `M0 ${y} L1400 ${y + 70 - rnd() * 140}`, stroke: "#18191c", "stroke-width": 5, fill: "none" });
+  }
+  // avenues
+  const av = ["M-20 820 C 300 760, 700 900, 1100 780", "M-20 1500 C 380 1420, 760 1560, 1120 1460", "M380 -20 C 460 600, 330 1400, 470 2420", "M760 -20 C 700 700, 860 1500, 740 2420", "M-20 1180 L 1120 1100", "M-20 300 C 400 380, 800 240, 1100 330", "M100 2000 C 500 1880, 800 2060, 1120 1960"];
+  for (const d of av) {
+    svgEl(m, "path", { d, stroke: "#23252a", "stroke-width": 20, fill: "none", "stroke-linecap": "round" });
+    svgEl(m, "path", { d, stroke: "#2c2f35", "stroke-width": 7, fill: "none", "stroke-linecap": "round" });
+  }
+  // bridges over the river
+  for (const y of [700, 1560]) svgEl(m, "path", { d: `M1000 ${y} L 1400 ${y - 40}`, stroke: "#2c2f35", "stroke-width": 16, fill: "none" });
+})();
+const mapwrap = $("mapwrap"), mapEl = $("map");
+
+/* pins (screen coords) */
+const ME = { x: 540, y: 1100 };
+const PROS = [
+  { n: "Алексей", i: "А", cat: "Ремонт квартир", r: 4.9, p: "2 500", km: 1.8, g: "linear-gradient(135deg,#f2d49b,#e3a76a)", x: 330, y: 820 },
+  { n: "Мария", i: "М", cat: "Мастер маникюра", r: 5.0, p: "1 500", km: 2.4, g: "linear-gradient(135deg,#f6c6d8,#d98bb0)", x: 800, y: 870 },
+  { n: "Дмитрий", i: "Д", cat: "Автоэлектрик", r: 4.8, p: "1 800", km: 0.9, g: "linear-gradient(135deg,#b9d7ff,#7ea8e8)", x: 700, y: 1330 },
+  { n: "Ольга", i: "О", cat: "Настройка ПК", r: 4.7, p: "3 000", km: 3.1, g: "linear-gradient(135deg,#d6f0b0,#9fcf6a)", x: 290, y: 1420 },
+];
+const DOTS = [[180, 640], [470, 700], [930, 700], [610, 900], [150, 1060], [960, 1120], [420, 1230], [880, 1560], [560, 1560], [200, 1700], [760, 1740], [980, 1370]];
+const pinsEl = $("pins");
+const dotEls = DOTS.map(([x, y]) => ({ el: make(pinsEl, `<div class="c" style="left:${x}px;top:${y}px"><div class="dot"></div></div>`).firstChild }));
+const pillEls = PROS.map((p) => make(pinsEl, `<div class="c" style="left:${p.x}px;top:${p.y}px"><div class="pill">${p.p} ₽</div></div>`).firstChild);
+const meWrap = make(pinsEl, `<div class="c" style="left:${ME.x}px;top:${ME.y}px"></div>`);
+const kmRings = [[520, "1 км"], [900, "2 км"]].map(([d, l]) => ({ ring: make(meWrap, `<div class="kmring" style="width:${d}px;height:${d}px"></div>`), label: make(meWrap, `<div class="kmlabel">${l}</div>`), d }));
+const rings = [0, 1, 2].map(() => make(meWrap, `<div class="ring"></div>`));
+const meDot = make(meWrap, `<div class="me"></div>`);
+
+/* links from me to pros */
+const linksSvg = $("links");
+const defs = svgEl(linksSvg, "defs", {});
+const gf = svgEl(defs, "filter", { id: "gl", x: "-50%", y: "-50%", width: "200%", height: "200%" });
+svgEl(gf, "feGaussianBlur", { stdDeviation: 6 });
+const links = PROS.map((p, k) => {
+  const cx = (ME.x + p.x) / 2 + (k % 2 ? 90 : -90), cy = (ME.y + p.y) / 2 + (k < 2 ? 40 : -40);
+  const d = `M${ME.x} ${ME.y} Q ${cx} ${cy} ${p.x} ${p.y + 40}`;
+  const glowP = svgEl(linksSvg, "path", { d, stroke: "#d4f25c", "stroke-width": 8, fill: "none", opacity: 0.35, filter: "url(#gl)", "stroke-linecap": "round" });
+  const path = svgEl(linksSvg, "path", { d, stroke: "#d4f25c", "stroke-width": 3.5, fill: "none", "stroke-linecap": "round" });
+  const len = path.getTotalLength();
+  const head = svgEl(linksSvg, "circle", { r: 9, fill: "#fff" });
+  return { path, glowP, len, head };
+});
+
+/* ---------- cards ---------- */
+const cardsEl = $("cards");
+const cardEls = PROS.map((p) =>
+  make(cardsEl, `<div class="card"><div class="av" style="background:${p.g}">${p.i}</div><div class="meta"><div class="nm">${p.n}</div><div class="cat">${p.cat}</div><div class="row"><div class="rt">${STAR}${p.r.toFixed(1).replace(".", ",")}</div><div class="km">${String(p.km).replace(".", ",")} км</div></div></div><div class="pr"><small>от</small><b>${p.p} ₽</b></div><div class="hl"></div></div>`),
+);
+const sortEl = $("sort"), sortInd = $("sortInd"), segA = $("segA"), segB = $("segB");
+const SLOT0 = -200, SLOTH = 222; // card centre y relative to stage centre
+const ORDER0 = [0, 1, 2, 3];
+const ORDER_KM = [2, 0, 1, 3]; // Дмитрий 0.9, Алексей 1.8, Мария 2.4, Ольга 3.1
+const ORDER_RT = [1, 0, 2, 3]; // Мария 5.0, Алексей 4.9, Дмитрий 4.8, Ольга 4.7
+const slotOf = (order, idx) => order.indexOf(idx);
+
+/* ---------- scene 4 ---------- */
+const s4 = $("s4");
+const btn = make(s4, `<div id="btn"><span id="btnTx">Связаться</span><div id="btnRipple"></div></div>`);
+const btnTx = btn.querySelector("#btnTx"), ripple = btn.querySelector("#btnRipple");
+const nodeP = make(s4, `<div class="node" style="background:${PROS[1].g};box-shadow:0 0 0 12px rgba(255,255,255,.06),0 30px 70px rgba(0,0,0,.5)">М</div>`);
+const nodePl = make(s4, `<div class="nodelabel">Мария</div>`);
+const nodeC = make(s4, `<div class="node" style="background:#d4f25c;box-shadow:0 0 0 12px rgba(212,242,92,.14),0 30px 70px rgba(0,0,0,.5)"><svg viewBox="0 0 24 24" width="74" height="74"><circle cx="12" cy="8.5" r="4" fill="#0b0b0c"/><path d="M4.5 20c.8-4 3.9-6 7.5-6s6.7 2 7.5 6z" fill="#0b0b0c"/></svg></div>`);
+const nodeCl = make(s4, `<div class="nodelabel">Вы</div>`);
+const bubA = make(s4, `<div class="bubble a">Сможете сегодня?</div>`);
+const bubB = make(s4, `<div class="bubble b">Да, буду в 18:00</div>`);
+const conn = $("conn");
+const cdefs = svgEl(conn, "defs", {});
+const cg = svgEl(cdefs, "filter", { id: "gl2", x: "-50%", y: "-50%", width: "200%", height: "200%" });
+svgEl(cg, "feGaussianBlur", { stdDeviation: 10 });
+const NP = { x: 540, y: 900 }, NC = { x: 540, y: 1580 };
+const connGlow = svgEl(conn, "line", { x1: NC.x, y1: NC.y, x2: NC.x, y2: NC.y, stroke: "#d4f25c", "stroke-width": 16, opacity: 0.45, filter: "url(#gl2)", "stroke-linecap": "round" });
+const connLine = svgEl(conn, "line", { x1: NC.x, y1: NC.y, x2: NC.x, y2: NC.y, stroke: "#d4f25c", "stroke-width": 6, "stroke-linecap": "round" });
+const parts = Array.from({ length: 6 }, () => svgEl(conn, "circle", { r: 8, fill: "#fff", opacity: 0 }));
+
+/* ================================================================ render */
+window.render = function (t) {
+  /* background: slow parallax drift, glow breathing */
+  S(glow, { x: Math.sin(t * 0.45) * 60, y: Math.cos(t * 0.35) * 80 - t * 6, s: 1 + Math.sin(t * 0.8) * 0.04 });
+  S(glow2, { x: Math.cos(t * 0.3) * 50, y: t * 8, o: 0.9 });
+  S(dots, { x: -t * 4, y: -t * 10, o: 0.9 - 0.5 * P(t, 3, 3.6) + 0.5 * P(t, 12.8, 13.4) });
+  glow.style.transform = glow.style.transform.replace("translate(-50%,-50%) ", "");
+  glow2.style.transform = glow2.style.transform.replace("translate(-50%,-50%) ", "");
+  dots.style.transform = dots.style.transform.replace("translate(-50%,-50%) ", "");
+
+  /* ---------------- scene 1: hook ---------------- */
+  const h1in = spring(t, 0.08, 8, 11), h2in = spring(t, 0.24, 8, 11);
+  const s1out = eIn(P(t, 2.0, 2.3));
+  S(h1, { y: -110 + (1 - h1in) * 120 - s1out * 40, o: clamp(t / 0.25) * (1 - s1out), blur: (1 - clamp((t - 0.08) / 0.3)) * 22 + s1out * 20, s: 1 - s1out * 0.1 + (1 - clamp(t / 0.5)) * 0.08 });
+  S(slot, { y: 80 + (1 - h2in) * 140 - s1out * 40, o: clamp((t - 0.24) / 0.25) * (1 - s1out), blur: (1 - clamp((t - 0.24) / 0.3)) * 22 + s1out * 20, s: 1 - s1out * 0.1 });
+  // word roll МАСТЕР? → РЕМОНТ → АВТО → КРАСОТА → IT → ДОМ
+  let idx = 0, blurRoll = 0;
+  const T = [1.0, 1.2, 1.4, 1.6, 1.8];
+  for (let k = 0; k < T.length; k++) {
+    const p = P(t, T[k], T[k] + 0.15);
+    idx += eIO(p);
+    blurRoll += Math.sin(p * Math.PI) * 9;
+  }
+  stack.style.transform = `translateY(${-idx * 176}px)`;
+  stack.style.filter = blurRoll > 0.1 ? `blur(${blurRoll}px)` : "none";
+  // chips burst and regroup into the logo
+  chips.forEach((c, k) => {
+    const burst = spring(t, 2.02 + k * 0.03, 6.5, 10);
+    const back = eIn(P(t, 2.5 + k * 0.02, 2.82));
+    const x = c.x * burst * (1 - back), y = c.y * burst * (1 - back) - 40 * (1 - back);
+    S(c.el, { x, y, r: c.r * burst * (1 - back), s: (0.4 + 0.6 * burst) * (1 - back * 0.75), o: clamp((t - 2.02) / 0.12) * (1 - P(t, 2.72, 2.84)), blur: back * 10 });
+  });
+
+  /* logo lockup 2.72 → header 3.25 → gone at 12.8 */
+  const logoIn = spring(t, 2.72, 7, 13);
+  const toHead = eIO(P(t, 3.15, 3.7));
+  const headOut = eIn(P(t, 12.7, 13.0));
+  const lockOn = t >= 2.72 && t < 3.72;
+  S(tile, { x: 0, y: lerp(-70, -800, toHead), s: lockOn ? logoIn * lerp(1, 0.3, toHead) : 0, o: lockOn ? clamp((t - 2.72) / 0.1) : 0, r: (1 - logoIn) * -25 });
+  word.querySelectorAll("span").forEach((sp, k) => {
+    const a = spring(t, 2.8 + k * 0.035, 8, 11);
+    sp.style.transform = `translateY(${(1 - a) * 60}px)`;
+    sp.style.opacity = clamp((t - 2.8 - k * 0.035) / 0.15);
+  });
+  S(word, { y: lerp(160, -800, toHead), s: lerp(1, 0.4, toHead), o: t < 3.72 ? 1 - toHead : 0 });
+  S(flash, { y: -70, s: 0.6 + eOut(P(t, 2.74, 3.3)) * 1.4, o: t > 2.74 && t < 3.3 ? 0.9 * (1 - P(t, 2.74, 3.3)) : 0 });
+  S(miniBrand, { y: -820 + (1 - eOut(P(t, 3.55, 3.85))) * 20 - headOut * 30, o: P(t, 3.55, 3.75) * (1 - headOut) });
+
+  /* ---------------- scene 2: map ---------------- */
+  const mapIn = eOut(P(t, 3.1, 3.8));
+  const mapDim = eIO(P(t, 5.9, 6.6)); // blurred backdrop under the cards
+  const mapOut = eIn(P(t, 9.9, 10.5));
+  const mz = lerp(1.18, 1, mapIn) + (t - 3.1) * 0.012;
+  mapwrap.style.transform = `translate(${-Math.sin(t * 0.3) * 12}px,${(1 - mapIn) * 60 - (t - 3) * 6}px) scale(${mz})`;
+  mapwrap.style.transformOrigin = "540px 1100px";
+  mapwrap.style.opacity = mapIn * (1 - 0.62 * mapDim) * (1 - mapOut);
+  mapwrap.style.filter = mapDim > 0.02 ? `blur(${mapDim * 14}px)` : "none";
+  mapwrap.style.visibility = mapIn * (1 - mapOut) < 0.002 ? "hidden" : "visible";
+  pinsEl.style.transform = mapwrap.style.transform;
+  pinsEl.style.transformOrigin = "540px 1100px";
+  const pinsOut = eIn(P(t, 5.75, 6.15));
+  pinsEl.style.opacity = 1 - pinsOut;
+  pinsEl.style.visibility = pinsOut >= 1 ? "hidden" : "visible";
+  linksSvg.style.transform = mapwrap.style.transform;
+  linksSvg.style.transformOrigin = "540px 1100px";
+  const meIn = spring(t, 3.35, 7, 13);
+  S(meDot, { s: meIn, o: meIn > 0 ? 1 : 0 });
+  rings.forEach((r, k) => {
+    const ph = ((t - 3.5 - k * 0.55) % 1.65) / 1.65;
+    const on = t > 3.5 + k * 0.55;
+    S(r, { s: 0.4 + ph * 3.2, o: on ? (1 - ph) * 0.8 : 0 });
+  });
+  kmRings.forEach((k, j) => {
+    const a = eOut(P(t, 3.5 + j * 0.15, 4.2 + j * 0.15));
+    S(k.ring, { s: lerp(0.7, 1, a), o: a });
+    S(k.label, { x: k.d / 2 * 0.7071 + 40, y: -k.d / 2 * 0.7071 - 10, o: a * 0.9 });
+  });
+  dotEls.forEach((d, k) => {
+    const a = spring(t, 3.55 + ((k * 7) % 12) * 0.045, 7, 14);
+    S(d.el, { s: a, o: a > 0 ? 1 : 0 });
+  });
+  pillEls.forEach((el, k) => {
+    const a = spring(t, 3.9 + k * 0.1, 7, 12);
+    S(el, { y: (1 - a) * 30, s: a, o: clamp((t - 3.9 - k * 0.1) / 0.1) });
+  });
+  const fi = inOut(t, 3.45, 5.8, 6.1);
+  S(hFind, { y: -660 + fi.y, o: fi.o, blur: fi.blur, s: fi.s });
+  // lines from me to the pros
+  links.forEach((l, k) => {
+    const a = eIO(P(t, 4.7 + k * 0.12, 5.35 + k * 0.12));
+    const fade = 1 - P(t, 5.75, 6.1);
+    l.path.setAttribute("stroke-dasharray", `${l.len}`);
+    l.path.setAttribute("stroke-dashoffset", `${l.len * (1 - a)}`);
+    l.glowP.setAttribute("stroke-dasharray", `${l.len}`);
+    l.glowP.setAttribute("stroke-dashoffset", `${l.len * (1 - a)}`);
+    l.path.setAttribute("opacity", 0.95 * fade);
+    l.glowP.setAttribute("opacity", 0.4 * fade);
+    const pt = l.path.getPointAtLength(l.len * a);
+    l.head.setAttribute("cx", pt.x);
+    l.head.setAttribute("cy", pt.y);
+    l.head.setAttribute("opacity", a > 0 && a < 1 ? 1 : 0);
+  });
+
+  /* ---------------- scene 3: cards ---------------- */
+  const ci = inOut(t, 6.15, 9.85, 10.15);
+  S(hCompare, { y: -600 + ci.y, o: ci.o, blur: ci.blur, s: ci.s });
+  const so = inOut(t, 6.55, 9.85, 10.15, 50);
+  S(sortEl, { y: -420 + so.y, o: so.o, blur: so.blur, s: so.s });
+  const toKm = spring(t, 7.35, 9, 12), toRt = spring(t, 8.75, 9, 12);
+  const indOn = eOut(P(t, 7.25, 7.5));
+  sortInd.style.transform = `translateX(${toRt * 442}px) scale(${lerp(0.6, 1, indOn)})`;
+  sortInd.style.opacity = indOn;
+  const aOn = t >= 7.3 && t < 8.85, bOn = t >= 8.85;
+  segA.style.color = aOn ? "#0b0b0c" : "rgba(255,255,255,.7)";
+  segB.style.color = bOn ? "#0b0b0c" : "rgba(255,255,255,.7)";
+
+  const keep = 1; // Мария stays
+  cardEls.forEach((el, k) => {
+    const p = PROS[k];
+    // entry: morph from the map pill position into the list
+    const ent = spring(t, 5.85 + k * 0.08, 7, 11);
+    const s0 = SLOT0 + slotOf(ORDER0, k) * SLOTH;
+    const sK = SLOT0 + slotOf(ORDER_KM, k) * SLOTH;
+    const sR = SLOT0 + slotOf(ORDER_RT, k) * SLOTH;
+    let y = lerp(lerp(s0, sK, toKm), sR, toRt);
+    let x = 0;
+    // entry from the pin (screen coords → stage centre coords)
+    const fx = p.x - 540, fy = p.y - 960;
+    x = lerp(fx, x, ent);
+    y = lerp(fy, y, ent);
+    let s = lerp(0.28, 1, ent);
+    // moving cards pop slightly during a re-sort
+    const moveKm = Math.sin(P(t, 7.35, 7.95) * Math.PI) * (slotOf(ORDER0, k) !== slotOf(ORDER_KM, k) ? 1 : 0);
+    const moveRt = Math.sin(P(t, 8.75, 9.35) * Math.PI) * (slotOf(ORDER_KM, k) !== slotOf(ORDER_RT, k) ? 1 : 0);
+    s *= 1 + 0.035 * (moveKm + moveRt);
+    x += 26 * (moveKm - moveRt) * (k % 2 ? 1 : -1);
+    let o = clamp((t - 5.85 - k * 0.08) / 0.18);
+    let blur = (1 - clamp((t - 5.85 - k * 0.08) / 0.35)) * 12;
+    // scene 4: others leave, Мария centres and turns into the provider node
+    if (k !== keep) {
+      const out = eIn(P(t, 9.95 + slotOf(ORDER_RT, k) * 0.05, 10.35 + slotOf(ORDER_RT, k) * 0.05));
+      y += out * 260;
+      o *= 1 - out;
+      blur += out * 18;
+      s *= 1 - out * 0.1;
+    } else {
+      const c = spring(t, 10.05, 7, 10);
+      y = lerp(y, -130, c);
+      s *= lerp(1, 1.04, c);
+      const toNode = eIO(P(t, 11.55, 11.95));
+      o *= 1 - toNode;
+      s *= lerp(1, 0.35, toNode);
+      y = lerp(y, NP.y - 960, toNode);
+      blur += toNode * 10;
+    }
+    el.style.zIndex = String(10 + Math.round((moveKm + moveRt) * 10));
+    S(el, { x, y, s, o, blur });
+    // highlight the criterion being sorted by
+    el.querySelector(".km").style.boxShadow = aOn ? `0 0 0 ${3 * Math.sin(P(t, 7.4, 8.1) * Math.PI)}px rgba(212,242,92,.8)` : "none";
+    el.querySelector(".hl").style.opacity = k === keep ? P(t, 10.2, 10.5) * (1 - P(t, 11.5, 11.7)) : 0;
+  });
+
+  /* ---------------- scene 4: connect ---------------- */
+  const bIn = spring(t, 10.55, 7, 12);
+  const press = Math.sin(P(t, 11.12, 11.34) * Math.PI);
+  const morph = eIO(P(t, 11.38, 11.7)); // pill → dot
+  const drop = eIO(P(t, 11.7, 12.1)); // dot travels down, drawing the line
+  const bw = lerp(920, 34, morph), bh = lerp(156, 34, morph);
+  btn.style.width = bw + "px";
+  btn.style.height = bh + "px";
+  btn.style.borderRadius = bh / 2 + "px";
+  btnTx.style.opacity = 1 - clamp(morph * 3);
+  const by = lerp(0, NC.y - 960, drop);
+  S(btn, { y: 150 + (1 - bIn) * 120, s: (t < 11.38 ? bIn : 1) * (1 - press * 0.07), o: clamp((t - 10.55) / 0.15) * (1 - P(t, 12.05, 12.15)) });
+  if (morph > 0) S(btn, { y: lerp(150, NC.y - 960, drop), s: 1, o: 1 - P(t, 12.05, 12.15) });
+  ripple.style.transform = `translate(-50%,-50%) scale(${eOut(P(t, 11.18, 11.6)) * 30})`;
+  ripple.style.opacity = t > 11.18 ? 0.6 * (1 - P(t, 11.18, 11.6)) : 0;
+  // connection line grows from the provider node down to the client
+  const lineEnd = lerp(NP.y, NC.y, drop);
+  for (const ln of [connLine, connGlow]) {
+    ln.setAttribute("x1", NP.x); ln.setAttribute("y1", NP.y);
+    ln.setAttribute("x2", NC.x); ln.setAttribute("y2", lineEnd);
+  }
+  const lineOn = drop > 0 ? 1 : 0;
+  const collapse = eIn(P(t, 12.75, 13.1));
+  connLine.setAttribute("opacity", lineOn * (1 - collapse));
+  connGlow.setAttribute("opacity", 0.45 * lineOn * (1 - collapse));
+  parts.forEach((c, k) => {
+    const ph = ((t * 0.9 + k / parts.length) % 1);
+    const up = k % 2 === 0;
+    const y = up ? lerp(NC.y, NP.y, ph) : lerp(NP.y, NC.y, ph);
+    c.setAttribute("cx", NP.x + (up ? -0 : 0));
+    c.setAttribute("cy", y);
+    c.setAttribute("r", 7);
+    c.setAttribute("opacity", t > 12.1 ? Math.sin(ph * Math.PI) * (1 - collapse) : 0);
+  });
+  const nIn = spring(t, 11.62, 7, 12), cIn = spring(t, 12.0, 7, 12);
+  const col = (k) => ({ x: 0, y: 0 });
+  S(nodeP, { y: lerp(NP.y - 960, -60, collapse), s: nIn * (1 - collapse * 0.8), o: clamp((t - 11.62) / 0.1) * (1 - collapse), blur: collapse * 10 });
+  S(nodePl, { y: lerp(NP.y - 960 - 140, -60, collapse), o: P(t, 11.8, 12.0) * (1 - collapse) });
+  S(nodeC, { y: lerp(NC.y - 960, -60, collapse), s: cIn * (1 - collapse * 0.8), o: clamp((t - 12.0) / 0.08) * (1 - collapse), blur: collapse * 10 });
+  S(nodeCl, { y: lerp(NC.y - 960 + 140, -60, collapse), o: P(t, 12.1, 12.3) * (1 - collapse) });
+  const ba = spring(t, 12.15, 8, 12), bb = spring(t, 12.45, 8, 12);
+  S(bubA, { x: lerp(-160, -60, collapse) - 40 + (1 - ba) * -40, y: lerp(430, -60, collapse), s: ba * (1 - collapse * 0.7), o: clamp((t - 12.15) / 0.1) * (1 - collapse), blur: collapse * 12 });
+  S(bubB, { x: lerp(170, 60, collapse) + 40 + (1 - bb) * 40, y: lerp(90, -60, collapse), s: bb * (1 - collapse * 0.7), o: clamp((t - 12.45) / 0.1) * (1 - collapse), blur: collapse * 12 });
+  const di = inOut(t, 11.75, 12.7, 13.0);
+  S(hDeal, { y: -600 + di.y, o: di.o, blur: di.blur, s: di.s });
+
+  /* ---------------- scene 5: brand reveal ---------------- */
+  const L = spring(t, 13.0, 6.5, 11);
+  if (t >= 3.72) S(tile, { y: -200, s: L * (1 + Math.sin(Math.max(0, t - 13.8) * 2) * 0.012), o: clamp((t - 13.0) / 0.1), r: (1 - L) * 30 });
+  if (t >= 12.9) S(flash, { y: -200, s: 0.7 + eOut(P(t, 13.05, 13.8)) * 1.5, o: t > 13.05 ? 0.8 * (1 - P(t, 13.05, 13.8)) : 0 });
+  wordFinal.querySelectorAll("span").forEach((sp, k) => {
+    const a = spring(t, 13.25 + k * 0.06, 8, 11);
+    sp.style.transform = `translateY(${(1 - a) * 90}px)`;
+    sp.style.opacity = clamp((t - 13.25 - k * 0.06) / 0.14);
+    sp.style.filter = `blur(${(1 - clamp((t - 13.25 - k * 0.06) / 0.25)) * 14}px)`;
+  });
+  S(wordFinal, { y: 20 - eOut(P(t, 13.25, 14.2)) * 0 , s: 1 + (1 - eOut5(P(t, 13.25, 14.1))) * 0.08, o: t >= 13.2 ? 1 : 0 });
+  const tg = spring(t, 13.75, 8, 11), fr = spring(t, 14.15, 8, 11);
+  S(tagline, { y: 150 + (1 - tg) * 50, o: clamp((t - 13.75) / 0.2), blur: (1 - clamp((t - 13.75) / 0.3)) * 12 });
+  S(free, { y: 275 + (1 - fr) * 50, s: 0.94 + 0.06 * fr, o: clamp((t - 14.15) / 0.2), blur: (1 - clamp((t - 14.15) / 0.3)) * 12 });
+};
+window.ready = document.fonts.ready.then(() => { window.render(0); return true; });
+</script>
+</body>
+</html>

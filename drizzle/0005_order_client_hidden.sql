@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "client_hidden_at" timestamp with time zone;

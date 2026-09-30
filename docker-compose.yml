@@ -1,0 +1,34 @@
+# Local / single-VPS stack: app + PostgreSQL. `docker compose up -d --build`
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ryadom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ryadom}
+      POSTGRES_DB: ryadom
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ryadom"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://ryadom:${POSTGRES_PASSWORD:-ryadom}@db:5432/ryadom
+      STORAGE_LOCAL_DIR: /app/storage
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/storage
+
+volumes:
+  pgdata:
+  uploads:
