@@ -86,9 +86,12 @@ type Y = {
 async function yandex(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
   if (!key) throw new Error("NEXT_PUBLIC_YANDEX_MAPS_API_KEY is not set");
-  await loadScript(`https://api-maps.yandex.ru/v3/?apikey=${key}&lang=ru_RU`);
-  const ymaps3 = (window as unknown as { ymaps3: Y }).ymaps3;
-  await ymaps3.ready;
+  // Never hang on a bad key / blocked script: give up after 8 s and let createMap fall back to Leaflet.
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("yandex maps timeout")), 8000));
+  await Promise.race([loadScript(`https://api-maps.yandex.ru/v3/?apikey=${encodeURIComponent(key)}&lang=ru_RU`), timeout]);
+  const ymaps3 = (window as unknown as { ymaps3?: Y }).ymaps3;
+  if (!ymaps3) throw new Error("ymaps3 unavailable");
+  await Promise.race([ymaps3.ready, timeout]);
   const map = new ymaps3.YMap(el, { location: { center: [o.center[1], o.center[0]], zoom: o.zoom }, theme: o.dark ? "dark" : "light" });
   map.addChild(new ymaps3.YMapDefaultSchemeLayer({}));
   map.addChild(new ymaps3.YMapDefaultFeaturesLayer({}));
@@ -108,7 +111,13 @@ async function yandex(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
     setCenter(c, z) {
       map.update({ location: { center: [c[1], c[0]], zoom: z ?? o.zoom, duration: 300 } });
     },
-    fitTo() {},
+    fitTo(markers) {
+      if (markers.length < 2) return;
+      const lngs = markers.map((m) => m.lng);
+      const lats = markers.map((m) => m.lat);
+      const pad = 0.01;
+      map.update({ location: { bounds: [[Math.min(...lngs) - pad, Math.min(...lats) - pad], [Math.max(...lngs) + pad, Math.max(...lats) + pad]], duration: 300 } });
+    },
     destroy() {
       map.destroy();
     },

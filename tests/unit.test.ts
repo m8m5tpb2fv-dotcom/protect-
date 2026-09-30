@@ -3,6 +3,7 @@ import { signInitData, verifyInitData } from "@/server/telegram/init-data";
 import { formatPhone, normalizePhone } from "@/lib/phone";
 import { decodeStartParam, encodeStartParam, miniAppUrl } from "@/lib/deeplink";
 import { newOrderCard } from "@/server/telegram/cards";
+import { parseGeocode, parseSuggest } from "@/lib/yandex-geo";
 import { km, plural, priceFrom, relative } from "@/lib/format";
 import { slugify } from "@/lib/slug";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -151,5 +152,31 @@ describe("telegram new-order card", () => {
     const direct = newOrderCard({ ...base, direct: true, budget: null }).markup.inline_keyboard.flat();
     expect(direct).toHaveLength(1);
     expect(newOrderCard({ ...base, direct: true, budget: null }).text).toContain("бюджет не указан");
+  });
+});
+
+describe("yandex geo parsing", () => {
+  it("suggestions: title, subtitle, uri", () => {
+    const r = parseSuggest({ results: [{ title: { text: "улица Чапаева, 10" }, subtitle: { text: "Саратов" }, uri: "ymapsbm1://geo?x", address: { formatted_address: "Россия, Саратов, улица Чапаева, 10" } }, { subtitle: { text: "без заголовка" } }] });
+    expect(r).toEqual([{ title: "улица Чапаева, 10", subtitle: "Саратов", uri: "ymapsbm1://geo?x", formatted: "Россия, Саратов, улица Чапаева, 10" }]);
+    expect(parseSuggest({})).toEqual([]);
+  });
+  it("geocoder: lon/lat order and short street address", () => {
+    const g = parseGeocode({
+      response: {
+        GeoObjectCollection: {
+          featureMember: [
+            {
+              GeoObject: {
+                Point: { pos: "46.034266 51.533103" },
+                metaDataProperty: { GeocoderMetaData: { text: "Россия, Саратов, улица Чапаева, 10", Address: { Components: [{ kind: "country", name: "Россия" }, { kind: "locality", name: "Саратов" }, { kind: "street", name: "улица Чапаева" }, { kind: "house", name: "10" }] } } },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(g).toEqual({ lat: 51.533103, lng: 46.034266, street: "улица Чапаева, 10" });
+    expect(parseGeocode({ response: { GeoObjectCollection: { featureMember: [] } } })).toBeNull();
   });
 });

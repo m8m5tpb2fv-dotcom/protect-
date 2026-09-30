@@ -121,6 +121,7 @@ npm run dev                        # http://localhost:3000
 
 ## 10. Карты
 `NEXT_PUBLIC_MAP_PROVIDER=leaflet` (по умолчанию, тайлы OpenStreetMap, ключ не нужен; при большой нагрузке переходите на Яндекс/2ГИС — политика использования tile.openstreetmap.org) | `yandex` (+`NEXT_PUBLIC_YANDEX_MAPS_API_KEY`) | `2gis` (+`NEXT_PUBLIC_2GIS_API_KEY`). Добавить провайдера — реализовать `MapAdapter` в `src/components/maps/adapters.ts`. При ошибке загрузки провайдера — фолбэк на Leaflet.
+Подсказки адресов в форме заявки — Яндекс Геосаджест (`NEXT_PUBLIC_YANDEX_SUGGEST_API_KEY`); выбранный адрес и «моё местоположение» переводятся в координаты/адрес HTTP Геокодером (ключ JS API). Без ключей поле работает как обычный ввод. Если Яндекс Карты не загрузились за 8 с (ключ, сеть), показывается Leaflet. Ключи ограничивайте по HTTP Referer в кабинете Яндекса.
 
 ## 11. Монетизация и платежи
 Подробно — [docs/MONETIZATION.md](docs/MONETIZATION.md).

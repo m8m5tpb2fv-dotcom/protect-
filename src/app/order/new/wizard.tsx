@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
-import { ArrowLeft, Camera, Check, ChevronRight, Clock, LocateFixed, MapPin, Pencil, Search, Sun, Timer, X, Zap } from "lucide-react";
+import { ArrowLeft, Camera, Check, ChevronRight, Clock, LocateFixed, Pencil, Search, Sun, Timer, X, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,8 @@ import { RatingInline } from "@/components/ui/rating";
 import { useToast } from "@/components/ui/toast";
 import { useMainButton, useTelegram } from "@/components/telegram/telegram-provider";
 import { BudgetDial } from "@/components/domain/budget-dial";
+import { AddressInput } from "@/components/domain/address-input";
+import { reverseGeocode } from "@/lib/yandex-geo";
 
 export type WizardCatalog = {
   id: number;
@@ -202,12 +204,20 @@ export function OrderWizard({
     }
   };
 
+  // biases address suggestions to the current city
+  const cityCenter = useMemo(
+    () => (districts.length ? { lat: districts.reduce((a, x) => a + x.lat, 0) / districts.length, lng: districts.reduce((a, x) => a + x.lng, 0) / districts.length } : { lat: 51.5331, lng: 46.0342 }),
+    [districts],
+  );
+
   const locate = async () => {
     setLocating(true);
     try {
       const pos = await getLocation(webApp);
       const near = nearestDistrict(pos, districts);
-      set({ lat: pos.lat, lng: pos.lng, districtId: near?.id ?? d.districtId, address: d.address || "Моё местоположение" });
+      // real street address for the point when the geocoder is configured
+      const found = await reverseGeocode(pos).catch(() => null);
+      set({ lat: pos.lat, lng: pos.lng, districtId: near?.id ?? d.districtId, address: found?.street || d.address || "Моё местоположение" });
       toast(near ? `Определили район: ${near.name}` : "Местоположение определено", "info");
     } catch (e) {
       toast((e as Error).message, "error");
@@ -418,7 +428,15 @@ export function OrderWizard({
               </span>
               {d.lat && <Check className="h-5 w-5 text-success" />}
             </button>
-            <Input className="mt-4" label={`Адрес · ${cityName}`} leading={<MapPin className="h-4 w-4" />} placeholder="Улица, дом" autoComplete="street-address" value={d.address} onChange={(e) => set({ address: e.target.value })} error={errors.address} maxLength={180} />
+            <AddressInput
+              label={`Адрес · ${cityName}`}
+              value={d.address}
+              // typing a new address drops coordinates from an earlier pick/geolocation
+              onChange={(v) => set({ address: v, ...(v !== d.address && d.lat != null ? { lat: null, lng: null } : {}) })}
+              onPick={(g) => set({ address: g.street, lat: g.lat, lng: g.lng, districtId: nearestDistrict(g, districts)?.id ?? d.districtId })}
+              center={cityCenter}
+              error={errors.address}
+            />
             <p className="mb-2 mt-5 px-1 text-[13px] font-semibold text-ink-2">Район</p>
             <div className="flex flex-wrap gap-2">
               {districts.map((x) => (
