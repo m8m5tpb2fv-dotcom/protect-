@@ -4,6 +4,7 @@ import { formatPhone, normalizePhone } from "@/lib/phone";
 import { decodeStartParam, encodeStartParam, miniAppUrl } from "@/lib/deeplink";
 import { newOrderCard } from "@/server/telegram/cards";
 import { parseGeocode, parseSuggest } from "@/lib/yandex-geo";
+import { clusterMarkers, parseClusterId } from "@/components/maps/cluster";
 import { km, plural, priceFrom, relative } from "@/lib/format";
 import { slugify } from "@/lib/slug";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -178,5 +179,29 @@ describe("yandex geo parsing", () => {
     });
     expect(g).toEqual({ lat: 51.533103, lng: 46.034266, street: "улица Чапаева, 10" });
     expect(parseGeocode({ response: { GeoObjectCollection: { featureMember: [] } } })).toBeNull();
+  });
+});
+
+describe("map marker clustering", () => {
+  const near = [
+    { id: "a", lat: 51.533, lng: 46.034, label: "1 000 ₽" },
+    { id: "b", lat: 51.5331, lng: 46.0341, label: "2 000 ₽" },
+    { id: "c", lat: 51.5332, lng: 46.0342, label: "3 000 ₽" },
+  ];
+  it("merges close markers into one bubble at city zoom", () => {
+    const out = clusterMarkers(near, 12);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ kind: "cluster", label: "3" });
+    expect(parseClusterId(out[0].id)).toEqual([expect.closeTo(51.5331, 4), expect.closeTo(46.0341, 4)]);
+  });
+  it("keeps markers separate when zoomed in, and never merges the active one or «me»", () => {
+    expect(clusterMarkers(near, 16)).toHaveLength(3);
+    const out = clusterMarkers([...near.slice(0, 2), { ...near[2], active: true }, { id: "me", lat: 51.533, lng: 46.034, kind: "me" as const }], 12);
+    expect(out.map((m) => m.id).sort()).toEqual(expect.arrayContaining(["c", "me"]));
+    expect(out).toHaveLength(3);
+  });
+  it("leaves distant markers alone and rejects non-cluster ids", () => {
+    expect(clusterMarkers([near[0], { id: "far", lat: 51.6, lng: 45.9 }], 12)).toHaveLength(2);
+    expect(parseClusterId("a")).toBeNull();
   });
 });

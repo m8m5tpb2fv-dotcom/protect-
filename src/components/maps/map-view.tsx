@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapPinned } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { clusterMarkers, parseClusterId } from "./cluster";
 import { createMap, lastMapDiagnostics, type MapAdapter, type MapCircle, type MapDiagnostics, type MapMarker } from "./adapters";
 
 /** Provider-agnostic map. Renders nothing heavy until visible. */
@@ -10,6 +11,7 @@ export function MapView({ center, zoom = 12, markers = [], circles = [], onMarke
   const adapter = useRef<MapAdapter | null>(null);
   const [state, setState] = useState<"idle" | "ready" | "error">("idle");
   const [diag, setDiag] = useState<MapDiagnostics | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(zoom);
   const clickRef = useRef(onMarkerClick);
   useEffect(() => {
     clickRef.current = onMarkerClick;
@@ -25,9 +27,21 @@ export function MapView({ center, zoom = 12, markers = [], circles = [], onMarke
         io.disconnect();
         try {
           const dark = document.documentElement.dataset.theme === "dark";
-          const a = await createMap(node, { center, zoom, dark, onMarkerClick: (id) => clickRef.current?.(id) });
+          const a = await createMap(node, {
+            center,
+            zoom,
+            dark,
+            onMarkerClick: (id) => {
+              // a cluster bubble zooms in; a real marker goes to the page's handler
+              const c = parseClusterId(id);
+              if (c) adapter.current?.setCenter(c, Math.min(adapter.current.getZoom() + 2, 18));
+              else clickRef.current?.(id);
+            },
+          });
           if (cancelled) return a.destroy();
           adapter.current = a;
+          a.onZoom(setZoomLevel);
+          setZoomLevel(a.getZoom());
           setState("ready");
           if (new URLSearchParams(window.location.search).has("mapdebug")) setDiag(lastMapDiagnostics);
         } catch {
@@ -48,9 +62,13 @@ export function MapView({ center, zoom = 12, markers = [], circles = [], onMarke
 
   useEffect(() => {
     if (state !== "ready" || !adapter.current) return;
-    adapter.current.setData(markers, circles);
     if (fit) adapter.current.fitTo(markers);
-  }, [state, markers, circles, fit]);
+  }, [state, markers, fit]);
+
+  useEffect(() => {
+    if (state !== "ready" || !adapter.current) return;
+    adapter.current.setData(clusterMarkers(markers, zoomLevel), circles);
+  }, [state, markers, circles, zoomLevel]);
 
   return (
     <div className={cn("relative isolate overflow-hidden rounded-[var(--radius-card)] bg-surface-2", className)}>

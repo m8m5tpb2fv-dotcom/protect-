@@ -4,7 +4,7 @@
  * providers (Leaflet/OSM, Yandex Maps v3, 2GIS MapGL) are loaded on demand.
  * Select with NEXT_PUBLIC_MAP_PROVIDER = leaflet | yandex | 2gis.
  */
-export type MapMarker = { id: string; lat: number; lng: number; label?: string; title?: string; active?: boolean; kind?: "provider" | "order" | "me" };
+export type MapMarker = { id: string; lat: number; lng: number; label?: string; title?: string; active?: boolean; kind?: "provider" | "order" | "me" | "cluster" };
 export type MapCircle = { lat: number; lng: number; radiusKm: number };
 export type MapOptions = { center: [number, number]; zoom: number; dark: boolean; onMarkerClick?: (id: string) => void };
 
@@ -12,6 +12,9 @@ export interface MapAdapter {
   setData(markers: MapMarker[], circles: MapCircle[]): void;
   setCenter(center: [number, number], zoom?: number): void;
   fitTo(markers: MapMarker[]): void;
+  getZoom(): number;
+  /** Called after the user zooms (used for marker clustering). */
+  onZoom(cb: (zoom: number) => void): void;
   destroy(): void;
 }
 
@@ -22,6 +25,11 @@ function markerHtml(m: MapMarker) {
   const bg = m.kind === "me" ? "var(--info)" : m.active ? "var(--accent)" : "var(--ink)";
   const fg = m.kind === "me" ? "#fff" : m.active ? "var(--accent-ink)" : "var(--bg)";
   if (m.kind === "me") return `<div style="width:18px;height:18px;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:0 0 0 6px color-mix(in srgb, var(--info) 25%, transparent)"></div>`;
+  if (m.kind === "cluster") {
+    const n = (m.label ?? "").replace(/\D/g, "");
+    const size = n.length > 2 ? 48 : 42;
+    return `<div style="transform:translate(-50%,-50%);width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:var(--accent-ink);font:700 15px/1 Inter,system-ui;border:3px solid var(--surface);box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 28%, transparent),0 8px 18px -8px rgba(0,0,0,.5);cursor:pointer">${n}</div>`;
+  }
   const text = (m.label ?? "").replace(/[<>&"]/g, "");
   return `<div style="transform:translate(-50%,-100%);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;height:30px;padding:0 11px;border-radius:999px;background:${bg};color:${fg};font:600 12.5px/1 Inter,system-ui;box-shadow:0 6px 16px -6px rgba(0,0,0,.45);border:2px solid var(--surface)">${text || "•"}</div>`;
 }
@@ -69,6 +77,10 @@ async function leaflet(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
     fitTo(markers) {
       if (markers.length > 1) map.fitBounds(L.latLngBounds(markers.map((m) => [m.lat, m.lng] as [number, number])), { padding: [40, 40], maxZoom: 14 });
     },
+    getZoom: () => map.getZoom(),
+    onZoom(cb) {
+      map.on("zoomend", () => cb(map.getZoom()));
+    },
     destroy() {
       map.remove();
     },
@@ -82,6 +94,7 @@ type Y = {
   YMapDefaultSchemeLayer: new (o?: unknown) => unknown;
   YMapDefaultFeaturesLayer: new (o?: unknown) => unknown;
   YMapMarker: new (o: unknown, el: HTMLElement) => unknown;
+  YMapListener: new (o: { onUpdate?: (e: { location: { zoom: number } }) => void }) => unknown;
 };
 async function yandex(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   const key = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY;
@@ -96,7 +109,24 @@ async function yandex(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   map.addChild(new ymaps3.YMapDefaultSchemeLayer({}));
   map.addChild(new ymaps3.YMapDefaultFeaturesLayer({}));
   let children: unknown[] = [];
+  let zoom = o.zoom;
+  let zoomCb: ((z: number) => void) | null = null;
+  let zoomTimer: ReturnType<typeof setTimeout> | undefined;
+  map.addChild(
+    new ymaps3.YMapListener({
+      onUpdate: ({ location }) => {
+        if (Math.round(location.zoom) === Math.round(zoom)) return;
+        zoom = location.zoom;
+        clearTimeout(zoomTimer);
+        zoomTimer = setTimeout(() => zoomCb?.(Math.round(zoom)), 150);
+      },
+    }),
+  );
   return {
+    getZoom: () => Math.round(zoom),
+    onZoom(cb) {
+      zoomCb = cb;
+    },
     setData(markers) {
       children.forEach((c) => map.removeChild(c));
       children = markers.map((m) => {
@@ -125,7 +155,7 @@ async function yandex(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
 }
 
 /* ───────── 2GIS MapGL ───────── */
-type G = { Map: new (el: HTMLElement, o: unknown) => { setCenter(c: number[]): void; setZoom(z: number): void; destroy(): void }; HtmlMarker: new (map: unknown, o: unknown) => { destroy(): void } };
+type G = { Map: new (el: HTMLElement, o: unknown) => { setCenter(c: number[]): void; setZoom(z: number): void; getZoom(): number; on(ev: string, cb: () => void): void; destroy(): void }; HtmlMarker: new (map: unknown, o: unknown) => { destroy(): void } };
 async function dgis(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
   const key = process.env.NEXT_PUBLIC_2GIS_API_KEY;
   if (!key) throw new Error("NEXT_PUBLIC_2GIS_API_KEY is not set");
@@ -143,6 +173,10 @@ async function dgis(el: HTMLElement, o: MapOptions): Promise<MapAdapter> {
       if (z) map.setZoom(z);
     },
     fitTo() {},
+    getZoom: () => Math.round(map.getZoom()),
+    onZoom(cb) {
+      map.on("zoomend", () => cb(Math.round(map.getZoom())));
+    },
     destroy() {
       map.destroy();
     },
@@ -163,7 +197,8 @@ export async function createMap(el: HTMLElement, o: MapOptions, provider: MapPro
     if (provider === "2gis") return await withDiag(provider, dgis(el, o));
   } catch (e) {
     console.warn("[map] provider failed, falling back to leaflet", e, blocked);
-    lastMapDiagnostics = { requested: provider, used: "leaflet", reason: [e instanceof Error ? e.message : String(e), ...blocked.slice(0, 3)].join(" · ") };
+    const why = e instanceof Error ? e.message : e instanceof Event ? `event ${e.type} ${(e.target as HTMLLinkElement | HTMLScriptElement | null)?.getAttribute?.("href") ?? (e.target as HTMLScriptElement | null)?.getAttribute?.("src") ?? ""}` : String(e);
+    lastMapDiagnostics = { requested: provider, used: "leaflet", reason: [why, ...blocked.slice(0, 3)].join(" · ") };
   } finally {
     document.removeEventListener("securitypolicyviolation", onCsp);
   }

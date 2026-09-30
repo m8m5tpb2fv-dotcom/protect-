@@ -13,9 +13,9 @@ const isProd = process.env.NODE_ENV === "production";
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${isProd ? "" : "'unsafe-eval'"} https://telegram.org https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://*.maps.yandex.net https://yandex.ru https://yastatic.net https://mapgl.2gis.com`,
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://yastatic.net https://api-maps.yandex.ru https://*.api-maps.yandex.ru",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://yastatic.net",
   "media-src 'self' blob: https:",
   "connect-src 'self' https: wss:",
   "worker-src 'self' blob:",
