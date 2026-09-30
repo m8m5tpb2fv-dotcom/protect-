@@ -62,7 +62,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           </div>
         </div>
       )}
-      <div className="sticky top-[calc(var(--safe-top)+60px)] z-20 -mx-4 mt-4 bg-bg/85 px-4 py-2 backdrop-blur-xl lg:top-[88px] lg:mx-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
+      <div className="sticky top-[calc(var(--safe-top)+72px)] z-20 -mx-4 mt-4 bg-bg/85 px-4 py-2 backdrop-blur-xl lg:top-[88px] lg:mx-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
         <SearchFilters districts={city.districts.map((d) => ({ slug: d.slug, name: d.name }))} />
       </div>
       <div className="mt-3">

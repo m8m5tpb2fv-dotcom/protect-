@@ -199,6 +199,10 @@
 
 /* ───────────────────────── Base ───────────────────────── */
 @layer base {
+  /* Grid items default to min-width:auto and grow to their longest line on narrow phones; let them shrink instead. */
+  .grid > * {
+    min-width: 0;
+  }
   html {
     overflow-x: clip;
     -webkit-text-size-adjust: 100%;

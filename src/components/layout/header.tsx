@@ -54,7 +54,7 @@ export function MobileTopBar() {
     window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
-  const show = ["/", "/services", "/search", "/orders", "/messages", "/profile", "/favorites", "/notifications", "/pro"].some((p) => (p === "/" ? pathname === "/" : pathname === p));
+  const show = ["/", "/services", "/search", "/orders", "/messages", "/profile", "/favorites", "/notifications"].some((p) => (p === "/" ? pathname === "/" : pathname === p));
   if (!show) return null;
   const first = user?.name.split(" ")[0];
   return (

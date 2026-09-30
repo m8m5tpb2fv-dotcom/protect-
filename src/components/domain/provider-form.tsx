@@ -245,9 +245,9 @@ export function ProviderForm({ mode, initial, catalog, districts }: { mode: "cre
                       </button>
                       {d ? (
                         <>
-                          <input type="time" aria-label={`${l} с`} value={d.from} onChange={(e) => set({ schedule: { ...v.schedule, [k]: { ...d, from: e.target.value } } })} className="h-9 rounded-xl bg-surface px-2 text-[14px] tabular" />
+                          <input type="time" aria-label={`${l} с`} value={d.from} onChange={(e) => set({ schedule: { ...v.schedule, [k]: { ...d, from: e.target.value } } })} className="h-9 w-[88px] min-w-0 rounded-xl bg-surface px-2 text-[14px] tabular" />
                           <span className="text-muted">—</span>
-                          <input type="time" aria-label={`${l} до`} value={d.to} onChange={(e) => set({ schedule: { ...v.schedule, [k]: { ...d, to: e.target.value } } })} className="h-9 rounded-xl bg-surface px-2 text-[14px] tabular" />
+                          <input type="time" aria-label={`${l} до`} value={d.to} onChange={(e) => set({ schedule: { ...v.schedule, [k]: { ...d, to: e.target.value } } })} className="h-9 w-[88px] min-w-0 rounded-xl bg-surface px-2 text-[14px] tabular" />
                         </>
                       ) : (
                         <span className="text-[14px] text-muted">Выходной</span>
