@@ -17,10 +17,16 @@ export function brandGlyph(ink: string = BRAND.ink) {
 }
 
 /**
- * Standalone SVG: lime tile + glyph.
+ * Standalone SVG: tile + glyph.
  * `rx` in 32-units (0 = square, for maskable icons); `scale` shrinks the glyph (maskable safe zone).
+ * `tone`: "lime" = black Р on lime (favicon, bot avatar); "dark" = lime Р on black — used for home-screen
+ * icons, because iOS darkens web-clip icons in dark mode by itself and a black Р on a darkened tile disappears.
+ * `tone: "mono"` = white glyph on transparent (Android themed/monochrome icon).
  */
-export function brandSvg({ size = 32, rx = 10, scale = 1 }: { size?: number; rx?: number; scale?: number } = {}) {
-  const g = scale === 1 ? brandGlyph() : `<g transform="translate(16 16) scale(${scale}) translate(-16 -16)">${brandGlyph()}</g>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32"><rect width="32" height="32" rx="${rx}" fill="${BRAND.accent}"/>${g}</svg>`;
+export function brandSvg({ size = 32, rx = 10, scale = 1, tone = "lime" }: { size?: number; rx?: number; scale?: number; tone?: "lime" | "dark" | "mono" } = {}) {
+  const ink = tone === "lime" ? BRAND.ink : tone === "dark" ? BRAND.accent : "#ffffff";
+  const glyph = brandGlyph(ink);
+  const g = scale === 1 ? glyph : `<g transform="translate(16 16) scale(${scale}) translate(-16 -16)">${glyph}</g>`;
+  const bg = tone === "mono" ? "" : `<rect width="32" height="32" rx="${rx}" fill="${tone === "lime" ? BRAND.accent : BRAND.ink}"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32">${bg}${g}</svg>`;
 }
