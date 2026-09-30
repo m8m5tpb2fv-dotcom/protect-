@@ -3,7 +3,6 @@ import { Camera, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { api, uploadFile } from "@/lib/api-client";
-import { APP } from "@/config/app";
 import { formatPhone } from "@/lib/phone";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, Spinner } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { useTelegram } from "@/components/telegram/telegram-provider";
 
 type U = { name: string; avatarUrl: string | null; districtId: number | null; notifyEmail: boolean; notifyTelegram: boolean; email: string | null; phone: string | null; telegramUsername: string | null; hasTelegram: boolean };
 
-export function SettingsForm({ user, districts }: { user: U; districts: { id: number; name: string }[] }) {
+export function SettingsForm({ user, districts, telegramBot }: { user: U; districts: { id: number; name: string }[]; telegramBot: string }) {
   const [f, setF] = useState(user);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -99,9 +98,9 @@ export function SettingsForm({ user, districts }: { user: U; districts: { id: nu
             <Send className="h-4 w-4" /> Разрешить сообщения от бота
           </Button>
         )}
-        {!user.hasTelegram && APP.telegramBot && (
-          <a href={`https://t.me/${APP.telegramBot}?start=settings`} target="_blank" rel="noopener noreferrer" className="mt-4 block text-[14px] font-semibold underline">
-            Открыть @{APP.telegramBot}
+        {!user.hasTelegram && telegramBot && (
+          <a href={`https://t.me/${telegramBot}`} target="_blank" rel="noopener noreferrer" className="mt-4 block text-[14px] font-semibold underline">
+            Открыть @{telegramBot}
           </a>
         )}
       </section>

@@ -11,7 +11,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { LogoMark } from "@/components/layout/logo";
 import { useTelegram } from "@/components/telegram/telegram-provider";
 
-export function LoginForm({ next, demo, telegramBot, telegramEnabled }: { next: string; demo: boolean; telegramBot: string; telegramEnabled: boolean }) {
+export function LoginForm({ next, demo, telegramBot, telegramLink }: { next: string; demo: boolean; telegramBot: string; telegramLink: string | null }) {
   const router = useRouter();
   const { isTelegram, authError } = useTelegram();
   const [tab, setTab] = useState<"phone" | "email">("phone");
@@ -141,10 +141,10 @@ export function LoginForm({ next, demo, telegramBot, telegramEnabled }: { next: 
             <Send className="h-5 w-5 -translate-x-px" />
           </span>
           <p className="flex-1 text-[14px] text-ink-2">
-            {telegramBot && telegramEnabled ? (
+            {telegramBot && telegramLink ? (
               <>
                 Откройте нас в Telegram — вход произойдёт автоматически.{" "}
-                <a className="font-semibold text-ink underline" href={`https://t.me/${telegramBot}/${APP.telegramAppName}`} target="_blank" rel="noopener noreferrer">
+                <a className="font-semibold text-ink underline" href={telegramLink} target="_blank" rel="noopener noreferrer">
                   Открыть @{telegramBot}
                 </a>
               </>

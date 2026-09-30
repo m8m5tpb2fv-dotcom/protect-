@@ -24,7 +24,7 @@ import { MapView } from "@/components/maps/map-view";
 import { PageHeader } from "@/components/layout/page-header";
 import { dateShort, pl, rating, responseTime, rub, VERIFICATION } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
-import { miniAppUrl } from "@/lib/deeplink";
+import { telegramLink } from "@/server/telegram/config";
 import { cn } from "@/lib/cn";
 
 const DAYS = [["mon", "Пн"], ["tue", "Вт"], ["wed", "Ср"], ["thu", "Чт"], ["fri", "Пт"], ["sat", "Сб"], ["sun", "Вс"]] as const;
@@ -55,7 +55,7 @@ export default async function ProviderPage({ params }: PageProps<"/provider/[slu
   const cover = p.coverUrl ?? `/art/${p.tone}/${p.icon}/${p.slug}-cover.svg?w=1600&h=900`;
   const v = VERIFICATION[p.verification];
   const maxBar = Math.max(1, ...ratingDistribution.map((r) => r.count));
-  const tgLink = miniAppUrl(APP.telegramBot, APP.telegramAppName, { kind: "provider", value: p.slug });
+  const tgLink = await telegramLink({ kind: "provider", value: p.slug });
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": p.kind === "company" ? "LocalBusiness" : "ProfessionalService",

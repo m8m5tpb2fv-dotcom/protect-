@@ -1,5 +1,4 @@
 import "server-only";
-import { APP } from "@/config/app";
 import { env } from "../env";
 import { log } from "../log";
 
@@ -34,13 +33,6 @@ export function sendMessage(chatId: string | number, text: string, markup?: Repl
 /** Absolute URL of a page inside the web app (used for Mini App web_app buttons). */
 export function webAppUrl(path = "/") {
   return new URL(path, env.APP_URL).toString();
-}
-
-/** Deep link that opens the Mini App directly: t.me/<bot>/<app>?startapp=<param> */
-export function miniAppLink(startParam?: string) {
-  if (!APP.telegramBot) return null;
-  const base = `https://t.me/${APP.telegramBot}/${APP.telegramAppName}`;
-  return startParam ? `${base}?startapp=${encodeURIComponent(startParam)}` : base;
 }
 
 export function escapeHtml(s: string) {

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/server/auth/session";
 import { getCurrentCity } from "@/server/services/catalog";
 import { PageHeader } from "@/components/layout/page-header";
 import { ThemeSwitch } from "@/components/domain/theme-switch";
+import { botUsername } from "@/server/telegram/config";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Настройки", robots: { index: false } };
@@ -18,6 +19,7 @@ export default async function SettingsPage() {
       <SettingsForm
         user={{ name: user.name, avatarUrl: user.avatarUrl, districtId: user.districtId, notifyEmail: user.notifyEmail, notifyTelegram: user.notifyTelegram, email: user.email, phone: user.phone, telegramUsername: user.telegramUsername, hasTelegram: !!user.telegramId }}
         districts={city.districts.map((d) => ({ id: d.id, name: d.name }))}
+        telegramBot={await botUsername()}
       />
       <section className="mt-3 rounded-[28px] bezel p-5">
         <h2 className="mb-3 text-[15px] font-semibold">Оформление</h2>

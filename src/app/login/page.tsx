@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { APP } from "@/config/app";
 import { env } from "@/server/env";
+import { botUsername, telegramLink } from "@/server/telegram/config";
 import { getCurrentUser } from "@/server/auth/session";
 import { LoginForm } from "./login-form";
 
@@ -14,5 +14,6 @@ function safeNext(n: unknown) {
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = safeNext((await searchParams).next);
   if (await getCurrentUser()) redirect(next);
-  return <LoginForm next={next} demo={env.DEMO_MODE} telegramBot={APP.telegramBot} telegramEnabled={!!env.TELEGRAM_BOT_TOKEN} />;
+  const tg = await botUsername();
+  return <LoginForm next={next} demo={env.DEMO_MODE} telegramBot={tg} telegramLink={tg ? await telegramLink() : null} />;
 }

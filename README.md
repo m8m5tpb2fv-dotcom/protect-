@@ -92,16 +92,20 @@ npm run dev                        # http://localhost:3000
 См. файл [`.env.example`](./.env.example) — все переменные прокомментированы. Секреты не коммитятся (`.gitignore`).
 
 ## 6. Telegram Bot
-1. `@BotFather` → `/newbot` → получите токен → `TELEGRAM_BOT_TOKEN`, имя → `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME`.
-2. Придумайте `TELEGRAM_WEBHOOK_SECRET` (случайная строка).
-3. Задеплойте приложение по **HTTPS**, укажите `APP_URL`.
-4. `npm run telegram:setup` — установит webhook (`/api/telegram/webhook`, проверка секретного заголовка), команды `/start /new /orders /pro` и кнопку меню, открывающую Mini App.
+Нужен только токен — всё остальное настраивается само.
+1. `@BotFather` → `/newbot` → получите токен → переменная `TELEGRAM_BOT_TOKEN` (на Railway — в Variables сервиса).
+2. Перезапустите сервис. При старте `scripts/start.sh` вызывает `scripts/telegram-setup.ts`, который:
+   - ставит webhook `https://<домен>/api/telegram/webhook` с секретом (по умолчанию HMAC от `SESSION_SECRET` и токена, можно задать `TELEGRAM_WEBHOOK_SECRET`);
+   - задаёт команды `/start /new /orders /pro /help`, кнопку меню «Открыть» (Mini App), описания бота.
+   Ошибка Telegram не мешает запуску сайта (пишется в лог). Вручную: `npm run telegram:setup`.
+3. Имя бота определяется по токену (`getMe`), задавать `TELEGRAM_BOT_USERNAME` не обязательно.
 
 Бот: `/start [payload]` отвечает кнопкой открытия нужного экрана (`/start provider_<slug>` и т. п.), фиксирует разрешение на сообщения; уведомления приходят с кнопкой «Открыть» прямо в Mini App.
 
 ## 7. Mini App
-1. `@BotFather` → `/newapp` → выберите бота, URL = `APP_URL`, короткое имя → `NEXT_PUBLIC_TELEGRAM_APP_NAME`.
-2. Ссылка: `https://t.me/<bot>/<app>`. Deep links: `?startapp=provider_<slug>`, `order_<uuid>`, `category_<slug>`, `service_<slug>`, `chat_<uuid>`.
+Работает сразу после шага 6: кнопка меню бота и кнопки в сообщениях открывают сайт как Mini App.
+Ссылки «Открыть в Telegram» по умолчанию ведут в чат бота (`https://t.me/<bot>?start=provider_<slug>`), бот отвечает кнопкой на нужный экран.
+Для прямых ссылок, открывающих Mini App без чата: `@BotFather` → `/newapp` → выберите бота, URL = адрес сайта, короткое имя → `TELEGRAM_APP_NAME`. Тогда ссылки: `https://t.me/<bot>/<app>?startapp=provider_<slug>` (а также `order_<uuid>`, `category_<slug>`, `service_<slug>`, `chat_<uuid>`).
 
 Как это работает: инлайн-скрипт в `<head>` определяет запуск из Telegram (`tgWebAppData`) и подгружает SDK только там. `TelegramProvider` вызывает `ready/expand`, маппит тему Telegram на токены дизайн-системы, учитывает safe areas (`safeAreaInset` + `contentSafeAreaInset`), управляет `BackButton`, `MainButton` (мастер заявки, анкета исполнителя), haptic feedback и автоматически логинит пользователя: `initData` проверяется на сервере по HMAC (`WebAppData` + токен бота, срок годности 24 ч) — `initDataUnsafe` не используется для авторизации. Если в браузере уже есть сессия без Telegram, аккаунты связываются. Cookie в HTTPS выставляется `SameSite=None; Secure; Partitioned` (для Telegram Web в iframe), плюс fallback на Bearer-токен.
 

@@ -65,6 +65,9 @@ describe("deep links", () => {
   it("builds mini app url", () => {
     expect(miniAppUrl("RyadomBot", "app", { kind: "category", value: "remont" })).toBe("https://t.me/RyadomBot/app?startapp=category_remont");
     expect(miniAppUrl("", "app")).toBeNull();
+    // without a registered Mini App the link goes through the bot chat (/start payload → «Открыть» button)
+    expect(miniAppUrl("RyadomBot", "", { kind: "provider", value: "ivan-petrov" })).toBe("https://t.me/RyadomBot?start=provider_ivan-petrov");
+    expect(miniAppUrl("RyadomBot", "")).toBe("https://t.me/RyadomBot");
   });
 });
 

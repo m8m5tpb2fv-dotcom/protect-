@@ -14,7 +14,12 @@ const schema = z.object({
     .default(process.env.NEXT_PUBLIC_APP_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "http://localhost:3000")),
   SESSION_SECRET: z.string().default(""),
   TELEGRAM_BOT_TOKEN: z.string().default(""),
+  /** Optional: derived from the bot token + SESSION_SECRET when empty (see telegram/config.ts). */
   TELEGRAM_WEBHOOK_SECRET: z.string().default(""),
+  /** Optional: resolved from the token via getMe when empty. */
+  TELEGRAM_BOT_USERNAME: z.string().default(process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? ""),
+  /** Short name of a Mini App registered in BotFather (/newapp). Empty = links go through the bot chat. */
+  TELEGRAM_APP_NAME: z.string().default(process.env.NEXT_PUBLIC_TELEGRAM_APP_NAME ?? ""),
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().default("./storage"),
   S3_ENDPOINT: z.string().default(""),

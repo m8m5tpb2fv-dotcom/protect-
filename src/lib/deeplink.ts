@@ -35,9 +35,14 @@ export function decodeStartParam(param: string | null | undefined): string | nul
   return null;
 }
 
-/** https://t.me/<bot>/<app>?startapp=<param> — null when the bot isn't configured. */
+/**
+ * Link that opens the app in Telegram — null when the bot isn't configured.
+ *  - with a registered Mini App (BotFather /newapp):  https://t.me/<bot>/<app>?startapp=<param>
+ *  - without it: https://t.me/<bot>?start=<param> — the bot answers with an «Открыть» button to the same screen.
+ */
 export function miniAppUrl(bot: string, app: string, t?: DeepLinkTarget) {
   if (!bot) return null;
-  const base = `https://t.me/${bot}/${app}`;
-  return t ? `${base}?startapp=${encodeStartParam(t)}` : base;
+  const param = t ? encodeStartParam(t) : null;
+  if (app) return `https://t.me/${bot}/${app}${param ? `?startapp=${param}` : ""}`;
+  return `https://t.me/${bot}${param ? `?start=${param}` : ""}`;
 }
