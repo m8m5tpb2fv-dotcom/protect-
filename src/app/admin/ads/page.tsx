@@ -34,10 +34,10 @@ export default async function AdminAds() {
               { name: "title", label: "Заголовок", required: true },
               { name: "body", label: "Текст" },
               { name: "linkUrl", label: "Ссылка", placeholder: "https://", required: true },
-              { name: "advertiser", label: "Рекламодатель (ИНН/название)", required: true },
+              { name: "advertiser", label: "Рекламодатель", placeholder: "ООО «Ромашка», ИНН", required: true },
               { name: "erid", label: "Токен erid" },
-              { name: "startsAt", label: "С", kind: "date", required: true },
-              { name: "endsAt", label: "По", kind: "date", required: true },
+              { name: "startsAt", label: "Показывать с", kind: "date", required: true },
+              { name: "endsAt", label: "Показывать по", kind: "date", required: true },
             ]}
             submitLabel="Создать"
           />

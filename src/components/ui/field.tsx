@@ -34,7 +34,14 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     <Field label={label} hint={hint} error={error} htmlFor={inputId} optional={optional} className={className}>
       <div className="relative">
         {leading && <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted">{leading}</span>}
-        <input ref={ref} id={inputId} aria-invalid={!!error || undefined} className={cn(control, "h-[52px]", leading && "pl-11")} {...rest} />
+        <input
+          ref={ref}
+          id={inputId}
+          aria-invalid={!!error || undefined}
+          // iOS gives date/time inputs an intrinsic width and centred text; keep them inside their column like other fields
+          className={cn(control, "h-[52px] min-w-0", leading && "pl-11", (rest.type === "date" || rest.type === "time" || rest.type === "datetime-local") && "block appearance-none text-left [&::-webkit-date-and-time-value]:text-left")}
+          {...rest}
+        />
       </div>
     </Field>
   );
@@ -61,7 +68,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   const inputId = id ?? auto;
   return (
     <Field label={label} hint={hint} error={error} htmlFor={inputId} optional={optional} className={className}>
-      <select ref={ref} id={inputId} aria-invalid={!!error || undefined} className={cn(control, "h-[52px] appearance-none bg-[length:16px] bg-[right_16px_center] bg-no-repeat pr-10")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a7a80' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
+      <select ref={ref} id={inputId} aria-invalid={!!error || undefined} className={cn(control, "h-[52px] appearance-none bg-size-[16px] bg-position-[right_16px_center] bg-no-repeat pr-10")} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a7a80' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...rest}>
         {children}
       </select>
     </Field>

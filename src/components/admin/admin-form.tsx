@@ -17,7 +17,7 @@ export function AdminForm({ type, fields, fixed = {}, initial = {}, submitLabel 
   const toast = useToast();
   return (
     <form
-      className={className ?? "flex flex-wrap items-end gap-3"}
+      className={className ?? "grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-3"}
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
@@ -44,9 +44,9 @@ export function AdminForm({ type, fields, fixed = {}, initial = {}, submitLabel 
     >
       {fields.map((f) =>
         f.kind === "switch" ? (
-          <Switch key={f.name} label={f.label} checked={!!values[f.name]} onChange={(v) => setValues({ ...values, [f.name]: v })} className="min-w-[180px]" />
+          <Switch key={f.name} label={f.label} checked={!!values[f.name]} onChange={(v) => setValues({ ...values, [f.name]: v })} className="min-w-0 basis-[180px]" />
         ) : f.kind === "select" ? (
-          <Select key={f.name} label={f.label} className="min-w-[180px] flex-1" value={String(values[f.name] ?? (f.required ? (f.options?.[0]?.v ?? "") : ""))} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}>
+          <Select key={f.name} label={f.label} className="min-w-0 flex-1 basis-[180px]" value={String(values[f.name] ?? (f.required ? (f.options?.[0]?.v ?? "") : ""))} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}>
             {!f.required && <option value="">—</option>}
             {f.options?.map((o) => (
               <option key={o.v} value={o.v}>
@@ -55,12 +55,12 @@ export function AdminForm({ type, fields, fixed = {}, initial = {}, submitLabel 
             ))}
           </Select>
         ) : f.kind === "textarea" ? (
-          <Textarea key={f.name} label={f.label} className="w-full" rows={3} value={String(values[f.name] ?? "")} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} required={f.required} />
+          <Textarea key={f.name} label={f.label} className="col-span-full w-full" rows={3} value={String(values[f.name] ?? "")} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} required={f.required} />
         ) : (
-          <Input key={f.name} label={f.label} className="min-w-[140px] flex-1" type={f.kind === "date" ? "date" : "text"} inputMode={f.kind === "number" ? "decimal" : undefined} placeholder={f.placeholder} value={String(values[f.name] ?? "")} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} required={f.required} />
+          <Input key={f.name} label={f.label} className="min-w-0 flex-1 basis-[160px]" type={f.kind === "date" ? "date" : "text"} inputMode={f.kind === "number" ? "decimal" : undefined} placeholder={f.placeholder} value={String(values[f.name] ?? "")} onChange={(e) => setValues({ ...values, [f.name]: e.target.value })} required={f.required} />
         ),
       )}
-      <Button type="submit" size="lg" loading={busy}>
+      <Button type="submit" size="lg" loading={busy} className="col-span-full justify-self-start">
         {submitLabel}
       </Button>
     </form>
