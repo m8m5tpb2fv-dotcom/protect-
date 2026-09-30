@@ -11,9 +11,10 @@ import { badRequest, conflict, forbidden, notFound } from "../http/errors";
 import { notify } from "../notifications/notify";
 import { getGeo } from "./catalog";
 import { orderPoint } from "@/lib/geo";
+import { maskContacts } from "@/lib/contacts";
 import { matchingProvidersForOrder } from "./providers";
 import { logOrderEvent, recomputeProviderStats } from "./provider-stats";
-import { newOrderCard } from "../telegram/cards";
+import { newOrderCard, responseCard, type ResponseCardInput } from "../telegram/cards";
 import { instantOrderCards } from "../billing";
 
 export const OPEN_STATUSES = ["new", "responses"] as const;
@@ -35,10 +36,10 @@ async function notifyNewOrder(order: Order, recipients: { userId: string; distan
     await notify(r.userId, {
       type: "order.new",
       title: direct ? "Новый заказ для вас" : "Новая заявка рядом",
-      body: `«${order.title}» · ${urgencyLabel}${km}`,
+      body: `«${maskContacts(order.title)}» · ${urgencyLabel}${km}`,
       link: `/orders/${order.id}`,
       // a personal order always reaches Telegram; broadcast leads do only for «Продвижение» subscribers
-      telegram: direct || instantOrderCards(r) ? newOrderCard({ ...order, subName: meta?.subName ?? "", districtName: meta?.districtName ?? null, distanceKm: r.distanceKm, photos, direct }) : false,
+      telegram: direct || instantOrderCards(r) ? newOrderCard({ ...order, title: maskContacts(order.title), description: maskContacts(order.description), subName: meta?.subName ?? "", districtName: meta?.districtName ?? null, distanceKm: r.distanceKm, photos, direct }) : false,
     });
   }
 }
@@ -182,7 +183,13 @@ export async function getOrderDetail(orderId: string, user: CurrentUser) {
     conversationId = c?.id ?? null;
   }
   return {
-    order: { ...order, contactPhone: revealContacts ? order.contactPhone : null, address: role === "prospect" ? maskAddress(order.address) : order.address },
+    order: {
+      ...order,
+      contactPhone: revealContacts ? order.contactPhone : null,
+      address: role === "prospect" ? maskAddress(order.address) : order.address,
+      // contacts typed into the text are hidden from providers until one of them is chosen
+      ...(role !== "client" && !revealContacts ? { title: maskContacts(order.title), description: maskContacts(order.description) } : {}),
+    },
     role,
     sub,
     district: district ?? null,
@@ -218,16 +225,18 @@ export async function respondToOrder(user: CurrentUser, orderId: string, input: 
     if (order.status === "new") await tx.update(orders).set({ status: "responses" }).where(eq(orders.id, orderId));
     await logOrderEvent(tx, orderId, user.id, "response", { providerId: p.id, price: input.price ?? null });
     const conversationId = await upsertConversation(tx, order.clientId, p.id, orderId);
-    const body = `Отклик на заказ «${order.title}»${input.price ? ` · ${input.price.toLocaleString("ru-RU")} ₽` : ""}\n\n${input.message}`;
+    const body = `Отклик на заказ «${maskContacts(order.title)}»${input.price ? ` · ${input.price.toLocaleString("ru-RU")} ₽` : ""}\n\n${input.message}`;
     await tx.insert(messages).values({ conversationId, senderId: user.id, body });
     await tx.update(conversations).set({ lastMessageAt: new Date(), lastMessagePreview: body.slice(0, 120) }).where(eq(conversations.id, conversationId));
     return { resp, conversationId };
   });
+  const card = await responseCardData(result.resp.id);
   await notify(order.clientId, {
     type: "order.response",
     title: "Новый отклик на заявку",
     body: `${p.displayName}${input.price ? ` · ${input.price.toLocaleString("ru-RU")} ₽` : ""} — «${order.title}»`,
     link: `/orders/${orderId}`,
+    telegram: card ? responseCard(card) : undefined,
   });
   await recomputeProviderStats(db, p.id);
   return result;
@@ -273,7 +282,13 @@ export async function orderAction(user: CurrentUser, orderId: string, a: Action)
       const [resp] = await db.select().from(orderResponses).where(and(eq(orderResponses.id, a.responseId), eq(orderResponses.orderId, orderId)));
       if (!resp || resp.status !== "pending") throw badRequest("Отклик не найден");
       await db.transaction(async (tx) => {
-        await tx.update(orders).set({ status: "assigned", providerId: resp.providerId, agreedPrice: resp.price ?? order.budget, assignedAt: new Date() }).where(eq(orders.id, orderId));
+        // conditional update: a double tap (web or Telegram button) cannot assign twice
+        const [won] = await tx
+          .update(orders)
+          .set({ status: "assigned", providerId: resp.providerId, agreedPrice: resp.price ?? order.budget, assignedAt: new Date() })
+          .where(and(eq(orders.id, orderId), inArray(orders.status, [...OPEN_STATUSES])))
+          .returning({ id: orders.id });
+        if (!won) throw conflict("Исполнитель уже выбран");
         await tx.update(orderResponses).set({ status: "accepted" }).where(eq(orderResponses.id, resp.id));
         await tx.update(orderResponses).set({ status: "declined" }).where(and(eq(orderResponses.orderId, orderId), ne(orderResponses.id, resp.id), eq(orderResponses.status, "pending")));
         await logOrderEvent(tx, orderId, user.id, "assigned", { providerId: resp.providerId });
@@ -422,6 +437,8 @@ export async function providerFeed(providerId: string, limit = 50) {
   return rows.map(({ order, distanceKm, responded, ...rest }) => ({
     ...order,
     ...rest,
+    title: maskContacts(order.title),
+    description: maskContacts(order.description),
     address: maskAddress(order.address),
     distanceKm: distanceKm == null ? null : Math.round(Number(distanceKm) * 10) / 10,
     responded,
@@ -441,7 +458,7 @@ export async function providerResponses(providerId: string) {
     .where(eq(orderResponses.providerId, providerId))
     .orderBy(desc(orderResponses.createdAt))
     .limit(100);
-  return rows;
+  return rows.map((r) => ({ ...r, orderTitle: maskContacts(r.orderTitle) }));
 }
 
 export async function leaveReview(user: CurrentUser, orderId: string, input: { rating: number; text: string; photos: string[] }) {
@@ -471,5 +488,35 @@ export async function dismissOrder(providerId: string, orderId: string) {
   const [o] = await db.select({ id: orders.id, title: orders.title }).from(orders).where(eq(orders.id, orderId));
   if (!o) throw notFound();
   await db.insert(orderDismissals).values({ providerId, orderId }).onConflictDoNothing();
-  return o;
+  return { ...o, title: maskContacts(o.title) };
+}
+
+/** Everything the client's Telegram response card shows. The order title is the client's own text, shown unmasked. */
+export async function responseCardData(responseId: string): Promise<(ResponseCardInput & { clientId: string; status: string; orderStatus: string }) | null> {
+  const [r] = await db
+    .select({
+      responseId: orderResponses.id,
+      status: orderResponses.status,
+      orderId: orders.id,
+      orderStatus: orders.status,
+      clientId: orders.clientId,
+      orderTitle: orders.title,
+      providerId: providers.id,
+      providerName: providers.displayName,
+      ratingAvg: providers.ratingAvg,
+      reviewsCount: providers.reviewsCount,
+      ordersCompleted: providers.ordersCompleted,
+      price: orderResponses.price,
+      eta: orderResponses.eta,
+      message: orderResponses.message,
+      responsesCount: sql<number>`(select count(*)::int from ${orderResponses} r where r.order_id = ${orders.id} and r.status <> 'withdrawn')`,
+    })
+    .from(orderResponses)
+    .innerJoin(orders, eq(orders.id, orderResponses.orderId))
+    .innerJoin(providers, eq(providers.id, orderResponses.providerId))
+    .where(eq(orderResponses.id, responseId));
+  if (!r) return null;
+  const [c] = await db.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.clientId, r.clientId), eq(conversations.providerId, r.providerId)));
+  if (!c) return null;
+  return { ...r, conversationId: c.id };
 }

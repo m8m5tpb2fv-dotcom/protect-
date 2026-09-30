@@ -9,6 +9,7 @@ import { badRequest, forbidden, notFound } from "../http/errors";
 import { notify } from "../notifications/notify";
 import { invalidateCatalog } from "./catalog";
 import { recomputeProviderStats } from "./provider-stats";
+import { purgeDemo } from "./demo";
 import { activate, cancelInvoice, grant } from "../billing";
 
 export async function audit(admin: CurrentUser, action: string, targetType: string, targetId: string, data?: Record<string, unknown>) {
@@ -296,10 +297,11 @@ export type AdminActionInput =
   | { type: "invoice.cancel"; id: string; note: string }
   | { type: "billing.grant"; slug: string; productId: string }
   | { type: "ad.create"; slot: "home" | "category" | "search"; categoryId?: number | null; title: string; body?: string; linkUrl: string; advertiser: string; erid?: string | null; startsAt: string; endsAt: string }
-  | { type: "ad.toggle"; id: string; isActive: boolean };
+  | { type: "ad.toggle"; id: string; isActive: boolean }
+  | { type: "demo.purge"; confirm: "УДАЛИТЬ" };
 
 export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
-  const adminOnly = new Set(["user.role", "promo.create", "promo.toggle", "city.toggle", "district.create", "category.update", "subcategory.create", "subcategory.toggle", "content.update", "invoice.activate", "invoice.cancel", "billing.grant", "ad.create", "ad.toggle"]);
+  const adminOnly = new Set(["user.role", "promo.create", "promo.toggle", "city.toggle", "district.create", "category.update", "subcategory.create", "subcategory.toggle", "content.update", "invoice.activate", "invoice.cancel", "billing.grant", "ad.create", "ad.toggle", "demo.purge"]);
   if (adminOnly.has(a.type) && admin.role !== "admin") throw forbidden("Действие доступно только администратору");
 
   switch (a.type) {
@@ -410,6 +412,11 @@ export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
     case "ad.toggle":
       await db.update(ads).set({ isActive: a.isActive }).where(eq(ads.id, a.id));
       break;
+    case "demo.purge": {
+      const r = await purgeDemo();
+      await audit(admin, "demo.purge", "system", "demo", r);
+      return r;
+    }
     case "content.update":
       await db
         .insert(contentBlocks)

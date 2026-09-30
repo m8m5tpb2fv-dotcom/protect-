@@ -6,6 +6,7 @@ import { newOrderCard } from "@/server/telegram/cards";
 import { parseGeocode, parseSuggest } from "@/lib/yandex-geo";
 import { clusterMarkers, parseClusterId } from "@/components/maps/cluster";
 import { haversineKm, orderPoint } from "@/lib/geo";
+import { maskContacts } from "@/lib/contacts";
 import { km, plural, priceFrom, relative } from "@/lib/format";
 import { slugify } from "@/lib/slug";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -219,5 +220,20 @@ describe("order point", () => {
     expect(orderPoint(antalya, saratov, zavodskoy)).toEqual(zavodskoy);
     expect(orderPoint(antalya, saratov, undefined)).toBeNull();
     expect(orderPoint(null, saratov, zavodskoy)).toEqual(zavodskoy);
+  });
+});
+
+describe("contact masking in order text", () => {
+  const H = "[контакт скрыт]";
+  it("hides phones in common formats", () => {
+    for (const p of ["+7 (917) 300-28-25", "89173002825", "8 917 300 28 25", "+79173002825", "9173002825", "8-917-300-28-25", "+7 917 300-28-25"]) expect(maskContacts(`Звоните ${p} вечером`)).toBe(`Звоните ${H} вечером`);
+  });
+  it("hides e-mails, messenger links and @handles", () => {
+    expect(maskContacts("пишите ivan.petrov@mail.ru")).toBe(`пишите ${H}`);
+    expect(maskContacts("tg: t.me/ivan_petrov, wa.me/79173002825")).toBe(`tg: ${H}, ${H}`);
+    expect(maskContacts("Телеграм @ivan_petrov")).toBe(`Телеграм ${H}`);
+  });
+  it("keeps prices, dates, sizes and times", () => {
+    for (const s of ["Бюджет 15 000 – 20 000 ₽", "Нужно 12.05.2026 с 10:00 до 18:00", "Ванная 2,5 × 1,7 м, квартира 45", "Смеситель Grohe 32 663 001", "Кв. 12, этаж 5, дом 1978 года"]) expect(maskContacts(s)).toBe(s);
   });
 });

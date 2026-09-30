@@ -2,7 +2,7 @@
  * Integration tests against a real PostgreSQL (ryadom_test).
  * Cover the critical marketplace flow, permissions, auth and the zero-commission / optional monetisation model.
  */
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -13,6 +13,8 @@ import { createSession, userFromToken, type CurrentUser } from "@/server/auth/se
 import { loginWithEmail, loginWithTelegram, registerWithEmail, requestPhoneCode, verifyPhoneCode } from "@/server/auth/service";
 import { signInitData } from "@/server/telegram/init-data";
 import { createOrder, dismissOrder, getOrderDetail, leaveReview, listClientOrders, orderAction, providerFeed, respondToOrder } from "@/server/services/orders";
+import { handleUpdate } from "@/server/telegram/handlers";
+import { demoSummary, purgeDemo } from "@/server/services/demo";
 import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
@@ -396,5 +398,92 @@ describe("optional monetisation (no acquiring)", () => {
     expect(await adClick(bad.id)).toBeNull();
     off();
     expect(await pickAd("search")).toBeNull();
+  });
+});
+
+describe("client contacts and Telegram response cards", () => {
+  it("a phone typed into the order is hidden from providers until one is chosen", async () => {
+    const o = await createOrder(client, { subcategoryId: santehnikId, title: "Протечка, звоните +7 917 300-28-25", description: "Течёт кран. Мой номер 89173002825, почта me@mail.ru", address: "ул. Чапаева, 12", urgency: "week", photos: [] }, cityId);
+    const asProvider = await getOrderDetail(o.id, provider);
+    expect(asProvider.order.title).toBe("Протечка, звоните [контакт скрыт]");
+    expect(asProvider.order.description).not.toMatch(/917|mail\.ru/);
+    const feed = await providerFeed(provider.provider!.id);
+    const inFeed = feed.find((x) => x.id === o.id)!;
+    expect(inFeed.description).not.toMatch(/917/);
+    expect((await getOrderDetail(o.id, client)).order.description).toContain("89173002825"); // the client sees their own text
+    await orderAction(client, o.id, { action: "cancel", reason: "тест" });
+  });
+
+  it("«Выбрать» in Telegram: only the owner, with confirmation, once", async () => {
+    await db.update(s.users).set({ telegramId: "91000001" }).where(eq(s.users.id, client.id));
+    await db.update(s.users).set({ telegramId: "91000002" }).where(eq(s.users.id, stranger.id));
+    const o = await createOrder(client, { subcategoryId: santehnikId, title: "Поменять сифон", description: "Старый сифон треснул", address: "ул. Рахова, 7", urgency: "week", photos: [] }, cityId);
+    const { resp } = await respondToOrder(provider, o.id, { message: "Сделаю сегодня", price: 1200 });
+    // stand-in for the Bot API: record what the bot would send
+    const sent: { method: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal("fetch", async (url: string, init: { body: string }) => {
+      sent.push({ method: String(url).split("/").pop()!, body: JSON.parse(init.body) });
+      return new Response(JSON.stringify({ ok: true, result: true }));
+    });
+    const tap = (fromId: number, data: string) => handleUpdate({ update_id: 1, callback_query: { id: "cb", from: { id: fromId, first_name: "x" }, data, message: { message_id: 7, chat: { id: fromId } } } });
+    const lastEdit = () => String([...sent].reverse().find((x) => x.method === "editMessageText")?.body.text ?? "");
+    const status = async () => (await db.select().from(s.orders).where(eq(s.orders.id, o.id)))[0].status;
+
+    await tap(91000002, `pickok:${resp.id}`); // a stranger pressing a forwarded button
+    expect(await status()).toBe("responses");
+    expect(sent.some((x) => x.method === "editMessageText")).toBe(false); // the stranger changed nothing
+    await tap(91000001, `pick:${resp.id}`); // first tap only asks for confirmation
+    expect(await status()).toBe("responses");
+    expect(lastEdit()).toContain("Выбрать <b>Мастер Тест</b> за 1");
+    await tap(91000001, `pickno:${resp.id}`); // «Назад» restores the card
+    expect(lastEdit()).toContain("Новый отклик");
+    await tap(91000001, `pickok:${resp.id}`);
+    await tap(91000001, `pickok:${resp.id}`); // double tap
+    const [after] = await db.select().from(s.orders).where(eq(s.orders.id, o.id));
+    expect(after.status).toBe("assigned");
+    expect(after.providerId).toBe(provider.provider!.id);
+    const events = await db.select().from(s.orderEvents).where(and(eq(s.orderEvents.orderId, o.id), eq(s.orderEvents.type, "assigned")));
+    expect(events.length).toBe(1);
+    expect(sent.filter((x) => x.method === "editMessageText").some((x) => String(x.body.text).startsWith("✅ Вы выбрали"))).toBe(true);
+    await orderAction(client, o.id, { action: "cancel", reason: "тест" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("demo data purge before launch", () => {
+  it("removes every demo account and demo ad, keeps real ones, cancels real orders taken by a demo provider", async () => {
+    // a miniature of what `seed --demo` creates: demo client, demo provider, demo ad
+    const [dc] = await db.insert(s.users).values({ name: "Демо Клиент", email: "client1@demo.ryadom.local", cityId }).returning();
+    const [dpu] = await db.insert(s.users).values({ name: "Демо Мастер", email: "master-42@demo.ryadom.local", cityId }).returning();
+    const [dp] = await db.insert(s.providers).values({ userId: dpu.id, slug: "demo-master-42", displayName: "Демо Мастер", headline: "Демо", primarySubcategoryId: santehnikId, cityId, status: "active" }).returning();
+    await db.insert(s.ads).values({ slot: "home", title: "Демо", linkUrl: "https://example.com", advertiser: "ООО Пример (демо)", erid: "DEMO123", startsAt: new Date(), endsAt: new Date(Date.now() + 86400000) });
+    // a demo client's completed order + review of a REAL provider → the real provider's rating must be recomputed
+    const [dOrder] = await db.insert(s.orders).values({ clientId: dc.id, cityId, subcategoryId: santehnikId, title: "Демо заказ", description: "Демо", address: "ул. 1", status: "completed", providerId: provider.provider!.id }).returning();
+    await db.insert(s.reviews).values({ orderId: dOrder.id, providerId: provider.provider!.id, authorId: dc.id, rating: 1, text: "демо-отзыв" });
+    // a REAL client's active order taken by the demo provider → cancelled
+    const [real] = await db.insert(s.orders).values({ clientId: client.id, cityId, subcategoryId: santehnikId, title: "Реальная заявка", description: "Выбран демо-мастер", address: "ул. 1", status: "assigned", providerId: dp.id }).returning();
+    const reviewsBefore = (await db.select().from(s.reviews).where(eq(s.reviews.providerId, provider.provider!.id))).length;
+
+    const before = await demoSummary();
+    expect(before).toMatchObject({ users: 2, providers: 1, ads: 1 });
+    process.env.DEMO_MODE = "true";
+    await expectAppError(purgeDemo(), 409); // would be re-seeded on the next start
+    delete process.env.DEMO_MODE;
+    await expectAppError(runAdminAction(await asUser(stranger.id), { type: "demo.purge", confirm: "УДАЛИТЬ" }), 403);
+    const r = (await runAdminAction(admin, { type: "demo.purge", confirm: "УДАЛИТЬ" })) as Awaited<ReturnType<typeof purgeDemo>>;
+    expect(r).toMatchObject({ users: 2, providers: 1, ads: 1, cancelledOrders: 1, recomputed: 1 });
+
+    expect(await demoSummary()).toMatchObject({ users: 0, providers: 0, ads: 0 });
+    expect((await db.select().from(s.orders).where(eq(s.orders.id, real.id)))[0].status).toBe("cancelled");
+    for (const u of [client, provider, admin, stranger]) expect((await db.select().from(s.users).where(eq(s.users.id, u.id))).length).toBe(1);
+    const [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
+    expect(p.status).toBe("active");
+    const reviewsAfter = await db.select().from(s.reviews).where(eq(s.reviews.providerId, provider.provider!.id));
+    expect(reviewsAfter.length).toBe(reviewsBefore - 1);
+    expect(p.reviewsCount).toBe(reviewsAfter.filter((x) => x.status === "visible").length);
+    expect((await db.select().from(s.adminActions).where(eq(s.adminActions.action, "demo.purge"))).length).toBe(1);
   });
 });

@@ -34,8 +34,8 @@ export function answerCallback(callbackQueryId: string, text?: string) {
   return tg("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
 }
 
-export function editMessage(chatId: number, messageId: number, text: string) {
-  return tg("editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML" });
+export function editMessage(chatId: number, messageId: number, text: string, markup?: ReplyMarkup) {
+  return tg("editMessageText", { chat_id: chatId, message_id: messageId, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: markup });
 }
 
 /** Absolute URL of a page inside the web app (used for Mini App web_app buttons). */

@@ -385,7 +385,7 @@ export function OrderWizard({
               onChange={(e) => set({ description: e.target.value })}
               error={errors.description}
               maxLength={3000}
-              hint={`${d.description.length} / 3000`}
+              hint={`Телефон сюда писать не нужно — мастера его не увидят, с выбранным вы свяжетесь в чате · ${d.description.length} / 3000`}
             />
             <div className="mt-5">
               <p className="mb-2 px-1 text-[13px] font-semibold text-ink-2">

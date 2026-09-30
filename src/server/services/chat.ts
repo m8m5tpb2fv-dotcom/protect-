@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import { maskContacts } from "@/lib/contacts";
 import { db } from "../db";
 import { conversations, messages, orders, providers, users, type MessageAttachment } from "../db/schema";
 import type { CurrentUser } from "../auth/session";
@@ -48,7 +49,7 @@ export async function listConversations(user: CurrentUser): Promise<Conversation
       peerName: asRole === "client" ? r.providerName : r.clientName,
       peerAvatar: asRole === "client" ? r.providerAvatar : r.clientAvatar,
       peerSlug: asRole === "client" ? r.providerSlug : null,
-      orderTitle: r.orderTitle,
+      orderTitle: r.orderTitle != null && asRole === "provider" ? maskContacts(r.orderTitle) : r.orderTitle,
       orderId: r.c.orderId,
       lastMessageAt: r.c.lastMessageAt,
       lastMessagePreview: r.c.lastMessagePreview,
@@ -75,7 +76,7 @@ export async function conversationAccess(conversationId: string, user: CurrentUs
     peer: isClient
       ? { name: row.providerName, avatar: row.providerAvatar, slug: row.providerSlug, userId: row.providerUserId }
       : { name: row.clientName, avatar: row.clientAvatar, slug: null, userId: row.c.clientId },
-    order: row.c.orderId ? { id: row.c.orderId, title: row.orderTitle, status: row.orderStatus } : null,
+    order: row.c.orderId ? { id: row.c.orderId, title: row.orderTitle != null && !isClient ? maskContacts(row.orderTitle) : row.orderTitle, status: row.orderStatus } : null,
   };
 }
 

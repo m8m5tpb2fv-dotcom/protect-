@@ -84,6 +84,10 @@ export async function userFromToken(token: string | null): Promise<CurrentUser |
   if (!u.lastSeenAt || Date.now() - u.lastSeenAt.getTime() > 600_000) {
     db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, u.id)).catch(() => {});
   }
+  return toCurrentUser(u, row.provider);
+}
+
+function toCurrentUser(u: typeof users.$inferSelect, provider: typeof providers.$inferSelect | null): CurrentUser {
   return {
     id: u.id,
     name: u.name,
@@ -98,18 +102,28 @@ export async function userFromToken(token: string | null): Promise<CurrentUser |
     notifyEmail: u.notifyEmail,
     notifyTelegram: u.notifyTelegram,
     createdAt: u.createdAt,
-    provider: row.provider
+    provider: provider
       ? {
-          id: row.provider.id,
-          slug: row.provider.slug,
-          status: row.provider.status,
-          displayName: row.provider.displayName,
-          isAvailable: row.provider.isAvailable,
-          verification: row.provider.verification,
-          proUntil: row.provider.proUntil,
+          id: provider.id,
+          slug: provider.slug,
+          status: provider.status,
+          displayName: provider.displayName,
+          isAvailable: provider.isAvailable,
+          verification: provider.verification,
+          proUntil: provider.proUntil,
         }
       : null,
   };
+}
+
+/**
+ * The account behind a Telegram user id — for bot callbacks. The webhook itself is authenticated by its
+ * secret token, and `from.id` of an update is set by Telegram, so it identifies the person who pressed the button.
+ */
+export async function userByTelegramId(telegramId: number | string): Promise<CurrentUser | null> {
+  const [row] = await db.select({ user: users, provider: providers }).from(users).leftJoin(providers, eq(providers.userId, users.id)).where(eq(users.telegramId, String(telegramId))).limit(1);
+  if (!row || row.user.isBlocked) return null;
+  return toCurrentUser(row.user, row.provider);
 }
 
 /** Current user for this request (memoised per request). */

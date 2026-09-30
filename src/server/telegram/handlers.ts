@@ -4,8 +4,10 @@ import { APP } from "@/config/app";
 import { decodeStartParam } from "@/lib/deeplink";
 import { db } from "../db";
 import { providers, users } from "../db/schema";
-import { dismissOrder } from "../services/orders";
-import { SKIP_ORDER } from "./cards";
+import { dismissOrder, orderAction, responseCardData } from "../services/orders";
+import { PICK, PICK_BACK, PICK_OK, SKIP_ORDER, confirmPickCard, responseCard } from "./cards";
+import { userByTelegramId } from "../auth/session";
+import { AppError } from "../http/errors";
 import { answerCallback, answerPreCheckout, editMessage, escapeHtml, sendMessage, webAppUrl } from "./bot";
 import { completeStarsPayment, starsPreCheckoutError } from "../billing";
 import { getProduct } from "@/config/monetization";
@@ -54,10 +56,58 @@ async function skipOrder(q: NonNullable<Update["callback_query"]>, orderId: stri
   if (q.message) await editMessage(q.message.chat.id, q.message.message_id, `🙈 Скрыто: «${escapeHtml(o.title)}»\nЗаявка больше не появится в вашей ленте.`);
 }
 
+/**
+ * «Выбрать» under a response card → confirmation → choose. Only the client who owns the order can do it
+ * (matched by the Telegram id Telegram put into the update); the choice itself goes through orderAction,
+ * i.e. the same checks as on the website.
+ */
+async function pickResponse(q: NonNullable<Update["callback_query"]>, action: string, responseId: string) {
+  const [user, data] = await Promise.all([userByTelegramId(q.from.id), responseCardData(responseId)]);
+  // UI updates must never abort the flow (e.g. «message is not modified», an expired callback)
+  const edit = (text: string, markup?: Parameters<typeof editMessage>[3]) => (q.message ? editMessage(q.message.chat.id, q.message.message_id, text, markup).catch(() => null) : null);
+  const answer = (text?: string) => answerCallback(q.id, text).catch(() => null);
+  if (!user || !data || data.clientId !== user.id) {
+    await answer("Запрос устарел");
+    return;
+  }
+  const chat = { inline_keyboard: [[{ text: "💬 Написать", web_app: { url: webAppUrl(`/messages/${data.conversationId}`) } }, { text: "Открыть заявку", web_app: { url: webAppUrl(`/orders/${data.orderId}`) } }]] };
+  const open = data.status === "pending" && (data.orderStatus === "new" || data.orderStatus === "responses");
+  if (action !== PICK_OK && !open) {
+    await answer("Отклик уже неактуален");
+    await edit(data.status === "accepted" ? `✅ Вы выбрали <b>${escapeHtml(data.providerName)}</b>.` : `Отклик от <b>${escapeHtml(data.providerName)}</b> уже неактуален.`, chat);
+    return;
+  }
+  if (action === PICK) {
+    await answer();
+    await edit(confirmPickCard(data).text, confirmPickCard(data).markup);
+    return;
+  }
+  if (action === PICK_BACK) {
+    await answer();
+    const card = responseCard(data);
+    await edit(card.text, card.markup);
+    return;
+  }
+  if (data.status === "accepted") {
+    await answer("Этот исполнитель уже выбран");
+    return;
+  }
+  try {
+    await orderAction(user, data.orderId, { action: "choose", responseId });
+  } catch (e) {
+    await answer(e instanceof AppError ? e.message : "Не получилось. Попробуйте в приложении.");
+    if (e instanceof AppError) await edit(`${escapeHtml(e.message)}.`, chat);
+    return;
+  }
+  await answer("Исполнитель выбран");
+  await edit(`✅ Вы выбрали <b>${escapeHtml(data.providerName)}</b>${data.price ? ` за ${data.price.toLocaleString("ru-RU")} ₽` : ""}.\n\nИсполнитель получил уведомление. Договоритесь о времени в чате — оплата напрямую исполнителю, без комиссии.`, chat);
+}
+
 async function handleCallback(q: NonNullable<Update["callback_query"]>) {
   const [action, id] = (q.data ?? "").split(":");
   const valid = !!id && /^[0-9a-f-]{36}$/.test(id) && !q.from.is_bot;
   if (valid && action === SKIP_ORDER) return skipOrder(q, id);
+  if (valid && (action === PICK || action === PICK_OK || action === PICK_BACK)) return pickResponse(q, action, id);
   let reply = "Запрос устарел";
   let text: string | null = null;
   if (valid && action === "login") {

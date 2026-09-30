@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { pageAdmin } from "@/server/auth/session";
 import { dashboardStats } from "@/server/services/admin";
+import { demoSummary } from "@/server/services/demo";
+import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage } from "@/components/admin/table";
 import { ColumnChart, RankBars } from "@/components/admin/charts";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +10,8 @@ import { rub } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 export default async function AdminDashboard() {
-  await pageAdmin();
-  const s = await dashboardStats(30);
+  const me = await pageAdmin();
+  const [s, demo] = await Promise.all([dashboardStats(30), demoSummary()]);
   const tiles = [
     { l: "Пользователи", v: s.users.total, d: `+${s.users.fresh} за 30 дней` },
     { l: "Исполнители", v: s.providers.total, d: `+${s.providers.fresh} · ${s.providers.available} свободны` },
@@ -48,6 +50,26 @@ export default async function AdminDashboard() {
             </Link>
           )}
         </div>
+      )}
+      {demo.users > 0 && (
+        <section className="mb-5 flex flex-wrap items-center gap-4 rounded-[24px] border border-warning/40 bg-warning/10 p-4">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">На сайте демо-данные</p>
+            <p className="mt-1 text-[13.5px] text-muted">
+              {demo.users} демо-аккаунтов, из них {demo.providers} исполнителей{demo.ads ? `, ${demo.ads} демо-объявления` : ""}. Перед запуском удалите их: настоящие аккаунты и заявки не пострадают.
+              {demo.reseeds && " Сейчас включена переменная DEMO_MODE — сначала удалите её в Railway, иначе демо вернётся после перезапуска."}
+            </p>
+          </div>
+          {me.role === "admin" && (
+            <AdminAction
+              payload={{ type: "demo.purge" }}
+              prompt="Удалить все демо-аккаунты, их заявки, отзывы и чаты? Это нельзя отменить. Для подтверждения введите УДАЛИТЬ"
+              promptKey="confirm"
+              label="Удалить демо-данные"
+              variant="danger"
+            />
+          )}
+        </section>
       )}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {tiles.map((t, i) => (

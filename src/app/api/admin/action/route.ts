@@ -39,10 +39,11 @@ const schema = z.discriminatedUnion("type", [
     endsAt: z.string().datetime(),
   }),
   z.object({ type: z.literal("ad.toggle"), id: z.string().uuid(), isActive: z.boolean() }),
+  z.object({ type: z.literal("demo.purge"), confirm: z.literal("УДАЛИТЬ") }),
 ]);
 
 export const POST = api(async (req) => {
   const admin = await requireAdmin();
-  await runAdminAction(admin, (await body(req, schema)) as AdminActionInput);
-  return { ok: true };
+  const result = await runAdminAction(admin, (await body(req, schema)) as AdminActionInput);
+  return { ok: true, result: result ?? null };
 });
