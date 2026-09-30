@@ -363,6 +363,8 @@ export const orders = pgTable(
     /** Informational only: the client pays the provider directly, the platform takes no commission. */
     agreedPrice: integer("agreed_price"),
     cancelReason: text("cancel_reason"),
+    /** The client removed the order from «Мои заказы». History stays for the provider and moderation. */
+    clientHiddenAt: ts("client_hidden_at"),
     createdAt: createdAt(),
     assignedAt: ts("assigned_at"),
     startedAt: ts("started_at"),

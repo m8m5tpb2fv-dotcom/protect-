@@ -22,12 +22,13 @@ function useAction(orderId: string) {
   const toast = useToast();
   const { haptic } = useTelegram();
   const [busy, setBusy] = useState<string | null>(null);
-  const run = async (key: string, payload: Record<string, unknown>, success: string) => {
+  const run = async (key: string, payload: Record<string, unknown>, success: string, then?: string) => {
     setBusy(key);
     try {
       await api(`/api/orders/${orderId}/action`, { body: payload });
       haptic("success");
       toast(success);
+      if (then) router.replace(then);
       router.refresh();
     } catch (e) {
       haptic("error");
@@ -175,6 +176,7 @@ export function RespondForm({ orderId, budget }: { orderId: string; budget: numb
 export function OrderActions({ orderId, role, status, isDirectToMe, isAssignedToMe, agreedPrice }: { orderId: string; role: string; status: string; isDirectToMe: boolean; isAssignedToMe: boolean; agreedPrice: number | null }) {
   const { busy, run } = useAction(orderId);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [finalPrice, setFinalPrice] = useState(agreedPrice ? String(agreedPrice) : "");
@@ -208,11 +210,36 @@ export function OrderActions({ orderId, role, status, isDirectToMe, isAssignedTo
         {role === "client" ? "Отменить заказ" : "Отказаться от заказа"}
       </Button>,
     );
+  const active = status === "assigned" || status === "in_progress";
+  if (role === "client")
+    buttons.push(
+      <Button key="delete" size="lg" variant="ghost" className="!text-danger" onClick={() => setDeleteOpen(true)}>
+        Удалить заявку
+      </Button>,
+    );
   if (!buttons.length) return null;
 
   return (
     <>
       <div className="flex flex-col gap-2">{buttons}</div>
+      <Sheet
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Удалить заявку?"
+        footer={
+          <Button block size="lg" variant="danger" loading={busy === "delete"} onClick={async () => (await run("delete", { action: "delete" }, "Заявка удалена", "/orders"), setDeleteOpen(false))}>
+            Удалить
+          </Button>
+        }
+      >
+        <p className="text-[15px] text-ink-2">
+          {status === "completed" || status === "cancelled"
+            ? "Заявка исчезнет из «Моих заказов». Оставленный отзыв сохранится."
+            : active
+              ? "Заказ будет отменён, исполнитель получит уведомление. Заявка исчезнет из «Моих заказов»."
+              : "Заявка закроется: исполнители больше не смогут откликнуться. Она исчезнет из «Моих заказов»."}
+        </p>
+      </Sheet>
       <Sheet
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}

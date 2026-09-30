@@ -12,7 +12,7 @@ import { seedReference } from "@/server/db/seed";
 import { createSession, userFromToken, type CurrentUser } from "@/server/auth/session";
 import { loginWithEmail, loginWithTelegram, registerWithEmail, requestPhoneCode, verifyPhoneCode } from "@/server/auth/service";
 import { signInitData } from "@/server/telegram/init-data";
-import { createOrder, dismissOrder, getOrderDetail, leaveReview, orderAction, providerFeed, respondToOrder } from "@/server/services/orders";
+import { createOrder, dismissOrder, getOrderDetail, leaveReview, listClientOrders, orderAction, providerFeed, respondToOrder } from "@/server/services/orders";
 import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
@@ -250,6 +250,19 @@ describe("website login via the Telegram bot", () => {
     expect(await findPendingLogin(c.token)).toBeNull();
     expect(await confirmTelegramLogin(c.id, { id: 555001, first_name: "Сайт" })).toBeNull();
     expect((await claimTelegramLogin(c.id, c.nonce)).status).toBe("expired");
+  });
+});
+
+describe("client deletes an order", () => {
+  it("open order: cancelled and hidden from «Мои заказы»; only the client may delete", async () => {
+    const o = await createOrder(client, { subcategoryId: santehnikId, title: "Удалю потом", description: "Проверка удаления заявки", address: "ул. Тестовая, 5", urgency: "week", photos: [] }, cityId);
+    await expectAppError(orderAction(provider, o.id, { action: "delete" }), 403);
+    await orderAction(client, o.id, { action: "delete" });
+    const [row] = await db.select().from(s.orders).where(eq(s.orders.id, o.id));
+    expect(row.status).toBe("cancelled");
+    expect(row.clientHiddenAt).not.toBeNull();
+    expect((await listClientOrders(client.id)).some((x) => x.id === o.id)).toBe(false);
+    expect((await providerFeed(provider.provider!.id)).some((x) => x.id === o.id)).toBe(false);
   });
 });
 

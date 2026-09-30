@@ -42,6 +42,7 @@ const EVENT_LABEL: Record<string, string> = {
   cancelled: "Заказ отменён",
   declined: "Исполнитель отказался от прямого заказа",
   provider_withdrew: "Исполнитель отказался от заказа",
+  deleted_by_client: "Клиент удалил заявку",
   reviewed: "Оставлен отзыв",
 };
 

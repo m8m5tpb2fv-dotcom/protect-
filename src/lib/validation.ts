@@ -56,6 +56,7 @@ export const orderActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("cancel"), reason: z.string().trim().max(300).optional() }),
   z.object({ action: z.literal("accept") }), // provider accepts a direct order
   z.object({ action: z.literal("decline") }), // provider declines a direct order
+  z.object({ action: z.literal("delete") }), // client removes the order from their list (cancelling it first if still active)
 ]);
 
 export const reviewSchema = z.object({

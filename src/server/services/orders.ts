@@ -245,7 +245,8 @@ type Action =
   | { action: "complete"; finalPrice?: number | null }
   | { action: "cancel"; reason?: string }
   | { action: "accept" }
-  | { action: "decline" };
+  | { action: "decline" }
+  | { action: "delete" };
 
 export async function orderAction(user: CurrentUser, orderId: string, a: Action) {
   const { order, role } = await orderAccess(orderId, user);
@@ -254,6 +255,14 @@ export async function orderAction(user: CurrentUser, orderId: string, a: Action)
   const providerUser = async (providerId: string) => (await db.select({ userId: providers.userId, name: providers.displayName }).from(providers).where(eq(providers.id, providerId)))[0];
 
   switch (a.action) {
+    case "delete": {
+      // Only the client can delete; an active order is cancelled first (the chosen provider is notified).
+      if (role !== "client") throw forbidden();
+      if (order.status !== "completed" && order.status !== "cancelled") await orderAction(user, orderId, { action: "cancel", reason: "Заявка удалена клиентом" });
+      await db.update(orders).set({ clientHiddenAt: new Date() }).where(eq(orders.id, orderId));
+      await logOrderEvent(db, orderId, user.id, "deleted_by_client");
+      break;
+    }
     case "choose": {
       if (role !== "client") throw forbidden();
       if (!(OPEN_STATUSES as readonly string[]).includes(order.status)) throw conflict("Исполнитель уже выбран");
@@ -374,7 +383,7 @@ function listQuery() {
 }
 
 export async function listClientOrders(userId: string) {
-  return flatten(await listQuery().where(eq(orders.clientId, userId)).orderBy(desc(orders.createdAt)).limit(100));
+  return flatten(await listQuery().where(and(eq(orders.clientId, userId), isNull(orders.clientHiddenAt))).orderBy(desc(orders.createdAt)).limit(100));
 }
 
 /** Open requests a provider can respond to. */
