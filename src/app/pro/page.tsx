@@ -72,6 +72,7 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-[13.5px]">
             <Badge tone="success">0% комиссии · оплата вам напрямую</Badge>
             {perk.pro && <Badge tone="accent">Pro до {p.proUntil!.toLocaleDateString("ru-RU")}</Badge>}
+            {perk.promo && <Badge tone="accent">👑 Продвижение до {p.promoUntil!.toLocaleDateString("ru-RU")}</Badge>}
             {perk.boosted && <Badge tone="ink">Поднят в поиске</Badge>}
             {!perk.pro && !perk.boosted && anyChannelOn() && (
               <Link href="/pro/billing" className="ml-auto font-semibold underline">

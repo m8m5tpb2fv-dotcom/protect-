@@ -6,16 +6,21 @@ import { db } from "../db";
 import { providers, users } from "../db/schema";
 import { dismissOrder } from "../services/orders";
 import { SKIP_ORDER } from "./cards";
-import { answerCallback, editMessage, escapeHtml, sendMessage, webAppUrl } from "./bot";
+import { answerCallback, answerPreCheckout, editMessage, escapeHtml, sendMessage, webAppUrl } from "./bot";
+import { completeStarsPayment, starsPreCheckoutError } from "../billing";
+import { getProduct } from "@/config/monetization";
 import { confirmTelegramLogin, describeDevice, findPendingLogin, parseLoginStartParam, rejectTelegramLogin } from "../auth/telegram-login";
 
 type TgUser = { id: number; first_name: string; last_name?: string; username?: string; is_bot?: boolean };
 type Update = {
   update_id: number;
-  message?: { message_id: number; text?: string; chat: { id: number; type: string }; from?: TgUser };
+  message?: { message_id: number; text?: string; chat: { id: number; type: string }; from?: TgUser; successful_payment?: SuccessfulPayment };
+  pre_checkout_query?: { id: string; from: TgUser; currency: string; total_amount: number; invoice_payload: string };
   my_chat_member?: { chat: { id: number }; from: { id: number }; new_chat_member: { status: string } };
   callback_query?: { id: string; from: TgUser; data?: string; message?: { message_id: number; chat: { id: number } } };
 };
+
+type SuccessfulPayment = { currency: string; total_amount: number; invoice_payload: string; telegram_payment_charge_id: string };
 
 const fmtTime = (d: Date) => d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Saratov" });
 
@@ -70,8 +75,30 @@ async function handleCallback(q: NonNullable<Update["callback_query"]>) {
 
 const openBtn = (text: string, path: string) => ({ inline_keyboard: [[{ text, web_app: { url: webAppUrl(path) } }]] });
 
+async function handlePreCheckout(q: NonNullable<Update["pre_checkout_query"]>) {
+  let error: string | null;
+  try {
+    error = await starsPreCheckoutError({ fromTelegramId: q.from.id, currency: q.currency, totalAmount: q.total_amount, payload: q.invoice_payload });
+  } catch {
+    error = "Не получилось проверить счёт. Попробуйте ещё раз.";
+  }
+  await answerPreCheckout(q.id, error);
+}
+
+async function handlePayment(chatId: number, from: TgUser, p: SuccessfulPayment) {
+  const inv = await completeStarsPayment({ fromTelegramId: from.id, currency: p.currency, totalAmount: p.total_amount, payload: p.invoice_payload, chargeId: p.telegram_payment_charge_id });
+  const title = inv ? (getProduct(inv.productId)?.title ?? "Услуга") : null;
+  await sendMessage(
+    chatId,
+    title ? `✅ <b>${escapeHtml(title)}</b> подключено. Спасибо!\n\nНовые заявки рядом будут приходить сюда сразу.` : "Оплата получена, но мы не смогли сразу подключить услугу. Мы уже разбираемся — напишите /paysupport, если вопрос срочный.",
+    openBtn("Открыть кабинет", "/pro/billing"),
+  );
+}
+
 export async function handleUpdate(u: Update) {
   if (u.callback_query) return handleCallback(u.callback_query);
+  if (u.pre_checkout_query) return handlePreCheckout(u.pre_checkout_query);
+  if (u.message?.successful_payment && u.message.from) return handlePayment(u.message.chat.id, u.message.from, u.message.successful_payment);
   if (u.my_chat_member) {
     const blocked = u.my_chat_member.new_chat_member.status === "kicked";
     await db.update(users).set({ telegramChatAllowed: !blocked }).where(eq(users.telegramId, String(u.my_chat_member.from.id)));
@@ -103,6 +130,13 @@ export async function handleUpdate(u: Update) {
       return;
     case "/pro":
       await sendMessage(m.chat.id, "Кабинет исполнителя: заявки рядом, отклики и заказы.", openBtn("Открыть кабинет", "/pro"));
+      return;
+    case "/paysupport":
+      await sendMessage(
+        m.chat.id,
+        `<b>Вопросы по оплате</b>\n\nЗвёздами оплачивается только «Продвижение» для исполнителей. Если услуга не включилась или вы хотите вернуть оплату — напишите в поддержку по кнопке ниже и укажите дату платежа. Ответим в течение дня.`,
+        openBtn("Написать в поддержку", "/support"),
+      );
       return;
     case "/help":
       await sendMessage(

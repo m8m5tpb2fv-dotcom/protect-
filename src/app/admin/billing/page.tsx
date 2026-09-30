@@ -2,7 +2,7 @@ import Link from "next/link";
 import { pageAdmin } from "@/server/auth/session";
 import { adminInvoices } from "@/server/services/admin";
 import { enabledChannels } from "@/server/billing";
-import { PLANS, PROMOTIONS, getProduct } from "@/config/monetization";
+import { PLANS, STAR_PLANS, PROMOTIONS, getProduct } from "@/config/monetization";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminForm } from "@/components/admin/admin-form";
 import { AdminPage, AdminPagination, Filters, sp, Table } from "@/components/admin/table";
@@ -19,13 +19,13 @@ export default async function AdminBilling({ searchParams }: PageProps<"/admin/b
   const page = Number(sp(p.page) ?? 1) || 1;
   const data = await adminInvoices({ status: status === "all" ? undefined : status, page });
   const channels = enabledChannels();
-  const products = [...Object.keys(PLANS), ...Object.keys(PROMOTIONS)].map((id) => getProduct(id)!);
+  const products = [...Object.keys(STAR_PLANS), ...Object.keys(PLANS), ...Object.keys(PROMOTIONS)].map((id) => getProduct(id)!);
   return (
     <AdminPage
       title="Платные услуги"
       subtitle={
         <>
-          Без эквайринга: исполнитель оставляет заявку, вы выставляете счёт вне платформы и подключаете услугу после оплаты. Каналы:{" "}
+          «Продвижение» оплачивается звёздами Telegram и включается автоматически. Остальные услуги — по заявке: вы выставляете счёт вне платформы и подключаете услугу после оплаты. Каналы:{" "}
           {channels.length ? channels.map((c) => <Badge key={c} tone="accent">{CHANNEL[c]}</Badge>) : <Badge tone="neutral">все выключены — сервис полностью бесплатный</Badge>}
         </>
       }
@@ -62,7 +62,7 @@ export default async function AdminBilling({ searchParams }: PageProps<"/admin/b
               </td>
               <td>{getProduct(i.productId)?.title ?? i.productId}</td>
               <td className="tabular">
-                {rub(i.amount - i.discount)}
+                {i.currency === "XTR" ? `${i.amount - i.discount} ⭐` : rub(i.amount - i.discount)}
                 {i.discount > 0 && <span className="text-[12px] text-muted"> (скидка {rub(i.discount)})</span>}
               </td>
               <td>

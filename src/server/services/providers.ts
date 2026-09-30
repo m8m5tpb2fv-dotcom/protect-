@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db";
 import {
   categories, districts, favorites, portfolioItems, providerDistricts, providers, providerServices, providerSubcategories, reviews, subcategories, users,
@@ -30,6 +30,8 @@ export type ProviderCard = {
   isPro: boolean;
   isPromoted: boolean;
   isHighlighted: boolean;
+  /** «Продвижение» subscriber — 👑 next to the name. */
+  hasCrown: boolean;
   districtName: string | null;
   lat: number | null;
   lng: number | null;
@@ -66,6 +68,7 @@ const cardColumns = (dist: SQL<number> | null) => ({
   proUntil: providers.proUntil,
   boostedUntil: providers.boostedUntil,
   highlightedUntil: providers.highlightedUntil,
+  promoUntil: providers.promoUntil,
   districtName: districts.name,
   lat: providers.lat,
   lng: providers.lng,
@@ -75,17 +78,18 @@ const cardColumns = (dist: SQL<number> | null) => ({
   distanceKm: dist ?? sql<number | null>`null::float`,
 });
 
-type CardRow = Omit<ProviderCard, "isPro" | "isPromoted" | "isHighlighted"> & { proUntil: Date | null; boostedUntil: Date | null; highlightedUntil: Date | null };
+type CardRow = Omit<ProviderCard, "isPro" | "isPromoted" | "isHighlighted" | "hasCrown"> & { proUntil: Date | null; boostedUntil: Date | null; highlightedUntil: Date | null; promoUntil: Date | null };
 
 function toCard(r: CardRow): ProviderCard {
-  const { proUntil, boostedUntil, highlightedUntil, ...rest } = r;
-  const perk = perks({ proUntil, boostedUntil, highlightedUntil });
+  const { proUntil, boostedUntil, highlightedUntil, promoUntil, ...rest } = r;
+  const perk = perks({ proUntil, boostedUntil, highlightedUntil, promoUntil });
   return {
     ...rest,
     distanceKm: r.distanceKm == null ? null : Math.round(r.distanceKm * 10) / 10,
     isPro: perk.pro,
     isPromoted: perk.boosted,
     isHighlighted: perk.highlighted,
+    hasCrown: perk.promo,
   };
 }
 
@@ -205,7 +209,7 @@ export async function searchProviders(cityId: number, q: SearchQuery, pageSize =
   if (q.priceMax) conds.push(sql`coalesce(${providers.priceFrom}, 0) <= ${q.priceMax}`);
 
   // Paid boost only affects order while the "promotion" channel is on; boosted cards are labelled «Реклама».
-  const promoted: SQL[] = channelOn("promotion") ? [desc(sql`(case when ${providers.boostedUntil} > now() then 1 else 0 end)`)] : [];
+  const promoted: SQL[] = channelOn("promotion") ? [desc(sql`(case when greatest(${providers.boostedUntil}, ${providers.promoUntil}) > now() then 1 else 0 end)`)] : [];
   const sort = q.sort ?? (q.q ? "relevance" : hasGeo ? "distance" : "rating");
   const order: SQL[] = [];
   if (sort === "distance" && dist) order.push(sql`${dist} asc nulls last`);
@@ -238,7 +242,7 @@ export async function listProviders(
   const conds: SQL[] = [eq(providers.status, "active"), eq(providers.cityId, cityId)];
   if (opts.subIds?.length) conds.push(inArray(providers.primarySubcategoryId, opts.subIds));
   if (opts.sort === "available") conds.push(eq(providers.isAvailable, true));
-  if (opts.sort === "promoted") conds.push(channelOn("promotion") ? gt(providers.boostedUntil, new Date()) : sql`false`);
+  if (opts.sort === "promoted") conds.push(channelOn("promotion") ? sql`greatest(${providers.boostedUntil}, ${providers.promoUntil}) > now()` : sql`false`);
   if (opts.excludeId) conds.push(sql`${providers.id} <> ${opts.excludeId}`);
   const order =
     opts.sort === "new"
@@ -317,7 +321,7 @@ export async function favoriteIds(userId: string | undefined | null) {
 export async function matchingProvidersForOrder(o: { subcategoryId: number; cityId: number; districtId: number | null; lat: number | null; lng: number | null }, limit = 30) {
   const dist = o.lat != null && o.lng != null ? distanceExpr(o.lat, o.lng) : null;
   const rows = await db
-    .select({ id: providers.id, userId: providers.userId, distanceKm: dist ?? sql<number | null>`null::float`, radiusKm: providers.radiusKm, worksCityWide: providers.worksCityWide, districtId: providers.districtId })
+    .select({ id: providers.id, userId: providers.userId, promoUntil: providers.promoUntil, distanceKm: dist ?? sql<number | null>`null::float`, radiusKm: providers.radiusKm, worksCityWide: providers.worksCityWide, districtId: providers.districtId })
     .from(providers)
     .where(
       and(

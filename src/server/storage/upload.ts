@@ -11,6 +11,8 @@ export const UPLOAD_PURPOSES = {
   order: { maxW: 1600, maxH: 1600, fit: "inside" as const, private: false, allowVideo: false, allowPdf: false },
   chat: { maxW: 1600, maxH: 1600, fit: "inside" as const, private: false, allowVideo: false, allowPdf: false },
   review: { maxW: 1600, maxH: 1600, fit: "inside" as const, private: false, allowVideo: false, allowPdf: false },
+  /** «Продвижение» work video at the top of the profile — video only. */
+  promo: { maxW: 1600, maxH: 1600, fit: "inside" as const, private: false, allowVideo: true, allowPdf: false, videoOnly: true },
   document: { maxW: 2400, maxH: 2400, fit: "inside" as const, private: true, allowVideo: false, allowPdf: true },
 } as const;
 export type UploadPurpose = keyof typeof UPLOAD_PURPOSES;
@@ -46,6 +48,7 @@ export async function processUpload(userId: string, purpose: UploadPurpose, file
   const buf = Buffer.from(await file.arrayBuffer());
   const kind = sniff(buf);
   if (!kind) throw badRequest("Поддерживаются фото JPG, PNG, WebP, HEIC" + (cfg.allowVideo ? ", видео MP4/WebM" : "") + (cfg.allowPdf ? ", PDF" : ""));
+  if ("videoOnly" in cfg && cfg.videoOnly && kind !== "mp4" && kind !== "webm") throw badRequest("Загрузите видео MP4 или WebM, до 60 МБ");
   const base = `${cfg.private ? "private/" : ""}${purpose}/${userId.slice(0, 8)}/${randomUUID()}`;
 
   if (kind === "mp4" || kind === "webm") {

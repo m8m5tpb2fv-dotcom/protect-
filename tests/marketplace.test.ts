@@ -17,7 +17,7 @@ import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
 import { runAdminAction } from "@/server/services/admin";
-import { activate, cancelInvoice, perks, requestService } from "@/server/billing";
+import { activate, cancelInvoice, completeStarsPayment, instantOrderCards, perks, requestService, setPromoVideo, starsPreCheckoutError, startStarsCheckout } from "@/server/billing";
 import { claimTelegramLogin, confirmTelegramLogin, findPendingLogin, parseLoginStartParam, loginStartParam, rejectTelegramLogin, startTelegramLogin } from "@/server/auth/telegram-login";
 import { adClick, pickAd } from "@/server/services/ads";
 import { AppError } from "@/server/http/errors";
@@ -299,7 +299,10 @@ describe("optional monetisation (no acquiring)", () => {
   it("with every channel off nothing can be bought and paid perks have no effect", async () => {
     off();
     await expectAppError(requestService(provider, "pro_month"), 404);
-    expect(perks({ proUntil: new Date(Date.now() + 86400000), boostedUntil: new Date(Date.now() + 86400000), highlightedUntil: null })).toEqual({ pro: false, boosted: false, highlighted: false });
+    const soon = new Date(Date.now() + 86400000);
+    expect(perks({ proUntil: soon, boostedUntil: soon, highlightedUntil: null, promoUntil: soon })).toEqual({ pro: false, promo: false, boosted: false, highlighted: false });
+    // fully free mode: every provider gets instant order cards
+    expect(instantOrderCards({ promoUntil: null })).toBe(true);
     expect(await pickAd("home")).toBeNull();
   });
 
@@ -348,6 +351,45 @@ describe("optional monetisation (no acquiring)", () => {
     await runAdminAction(admin, { type: "billing.grant", slug: p0.slug, productId: "highlight_7d" });
     const promos = await db.select().from(s.promotions).where(eq(s.promotions.providerId, p0.id));
     expect(promos.some((x) => x.kind === "highlight_7d" && x.invoiceId === null)).toBe(true);
+  });
+
+  it("«Продвижение» for Telegram Stars: only the issued amount, only from the invoice owner, activated once", async () => {
+    on();
+    const pid = provider.provider!.id;
+    await expectAppError(requestService(provider, "promo_month"), 400); // not an off-platform invoice product
+    await expectAppError(startStarsCheckout(provider, "promo_month"), 400); // no Telegram linked yet
+    await db.update(s.users).set({ telegramId: "777001" }).where(eq(s.users.id, provider.id));
+    const [inv] = await db.insert(s.invoices).values({ userId: provider.id, providerId: pid, productId: "promo_month", amount: 100, currency: "XTR" }).returning();
+    const pay = { fromTelegramId: 777001, currency: "XTR", totalAmount: 100, payload: `inv:${inv.id}` };
+
+    expect(await starsPreCheckoutError(pay)).toBeNull();
+    expect(await starsPreCheckoutError({ ...pay, fromTelegramId: 999 })).toMatch(/другому/);
+    expect(await starsPreCheckoutError({ ...pay, totalAmount: 1 })).toMatch(/Сумма/);
+    expect(await starsPreCheckoutError({ ...pay, currency: "RUB" })).toMatch(/Сумма/);
+    expect(await starsPreCheckoutError({ ...pay, payload: "inv:not-a-uuid" })).toMatch(/не найден/);
+    expect(await completeStarsPayment({ ...pay, fromTelegramId: 999, chargeId: "forged" })).toBeNull();
+
+    await completeStarsPayment({ ...pay, chargeId: "tg-charge-1" });
+    await completeStarsPayment({ ...pay, chargeId: "tg-charge-1" }); // redelivered update
+    const [done] = await db.select().from(s.invoices).where(eq(s.invoices.id, inv.id));
+    expect(done.status).toBe("activated");
+    expect(done.telegramChargeId).toBe("tg-charge-1");
+    const [p] = await db.select().from(s.providers).where(eq(s.providers.id, pid));
+    expect(p.promoUntil!.getTime()).toBeGreaterThan(Date.now() + 29 * 86400000);
+    expect(p.promoUntil!.getTime()).toBeLessThan(Date.now() + 31 * 86400000); // extended once, not twice
+    expect(perks(p)).toMatchObject({ promo: true, boosted: true });
+    expect(instantOrderCards(p)).toBe(true);
+    expect(instantOrderCards({ promoUntil: null })).toBe(false); // non-subscribers: in-app feed only
+    expect(await starsPreCheckoutError(pay)).toMatch(/уже оплачен/); // the same invoice cannot be paid twice
+
+    const me = await asUser(provider.id);
+    const own = `/files/promo/${provider.id.slice(0, 8)}/0b7e1a52-3c1f-4d6e-9a51-2f7c3d9e8b10.mp4`;
+    await expectAppError(setPromoVideo(me, `/files/promo/${client.id.slice(0, 8)}/0b7e1a52-3c1f-4d6e-9a51-2f7c3d9e8b10.mp4`), 400);
+    await expectAppError(setPromoVideo(me, "https://evil.example/x.mp4"), 400);
+    await setPromoVideo(me, own);
+    off();
+    await expectAppError(setPromoVideo(me, own), 403); // perk gone with the channel
+    await setPromoVideo(me, null); // removing is always allowed
   });
 
   it("ads are labelled data, served only when the channel is on; unsafe links are never followed", async () => {

@@ -30,7 +30,7 @@ async function main() {
   if (!secret) throw new Error("Set SESSION_SECRET (or TELEGRAM_WEBHOOK_SECRET)");
 
   const me = (await call("getMe", {})) as { username: string };
-  await call("setWebhook", { url: `${url}/api/telegram/webhook`, secret_token: secret, allowed_updates: ["message", "my_chat_member", "callback_query"], drop_pending_updates: false });
+  await call("setWebhook", { url: `${url}/api/telegram/webhook`, secret_token: secret, allowed_updates: ["message", "my_chat_member", "callback_query", "pre_checkout_query"], drop_pending_updates: false });
   await call("setMyCommands", {
     commands: [
       { command: "start", description: "Открыть приложение" },
@@ -38,6 +38,7 @@ async function main() {
       { command: "orders", description: "Мои заказы" },
       { command: "pro", description: "Кабинет исполнителя" },
       { command: "help", description: "Как это работает" },
+      { command: "paysupport", description: "Вопросы по оплате" },
     ],
   });
   await call("setChatMenuButton", { menu_button: { type: "web_app", text: "Открыть", web_app: { url } } });

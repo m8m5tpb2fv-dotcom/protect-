@@ -83,9 +83,12 @@ export async function dashboardStats(days = 30) {
   // Platform revenue = activated paid services only (orders never carry money for the platform).
   const [revenue] = await db
     .select({
-      total: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}), 0)::int`,
-      period: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}) filter (where ${invoices.activatedAt} >= ${since}), 0)::int`,
-      requested: sql<number>`count(*) filter (where ${invoices.status} = 'requested')::int`,
+      // rubles (invoices paid off-platform) and Telegram Stars are counted separately
+      total: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}) filter (where ${invoices.status} = 'activated' and ${invoices.currency} = 'RUB'), 0)::int`,
+      period: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}) filter (where ${invoices.status} = 'activated' and ${invoices.currency} = 'RUB' and ${invoices.activatedAt} >= ${since}), 0)::int`,
+      stars: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}) filter (where ${invoices.status} = 'activated' and ${invoices.currency} = 'XTR'), 0)::int`,
+      // an unpaid Stars checkout needs no admin action
+      requested: sql<number>`count(*) filter (where ${invoices.status} = 'requested' and ${invoices.currency} = 'RUB')::int`,
     })
     .from(invoices)
     .where(sql`${invoices.status} in ('activated', 'requested')`);
@@ -108,6 +111,7 @@ export async function dashboardStats(days = 30) {
     openTickets: openTickets.n,
     platformRevenue: revenue.total,
     platformRevenuePeriod: revenue.period,
+    platformRevenueStars: revenue.stars,
     openInvoices: revenue.requested,
   };
 }
@@ -222,7 +226,8 @@ export async function adminTickets({ status, page = 1 }: ListParams) {
 }
 
 export async function adminInvoices({ status, page = 1 }: ListParams) {
-  const where = status ? eq(invoices.status, status as "requested") : undefined;
+  // unpaid Stars checkouts are abandoned carts, not requests to act on
+  const where = status === "requested" ? and(eq(invoices.status, "requested"), eq(invoices.currency, "RUB")) : status ? eq(invoices.status, status as "requested") : undefined;
   const rows = await db
     .select({ i: invoices, userName: users.name, email: users.email, providerName: providers.displayName, providerSlug: providers.slug })
     .from(invoices)

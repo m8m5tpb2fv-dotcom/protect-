@@ -58,6 +58,7 @@ export type TgWebApp = {
   setBackgroundColor(c: string): void;
   setBottomBarColor?(c: string): void;
   disableVerticalSwipes?(): void;
+  openInvoice?(url: string, cb?: (status: "paid" | "cancelled" | "failed" | "pending") => void): void;
   enableClosingConfirmation(): void;
   disableClosingConfirmation(): void;
   onEvent(e: string, cb: (...a: unknown[]) => void): void;

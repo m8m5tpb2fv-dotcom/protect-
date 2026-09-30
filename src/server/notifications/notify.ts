@@ -24,8 +24,8 @@ export type NotifyInput = {
   title: string;
   body?: string;
   link?: string;
-  /** Rich Telegram rendering (HTML text + buttons). Defaults to title/body with an «Открыть» button. */
-  telegram?: { text: string; markup: ReplyMarkup };
+  /** Rich Telegram rendering (HTML text + buttons). Defaults to title/body with an «Открыть» button; false = in-app only. */
+  telegram?: { text: string; markup: ReplyMarkup } | false;
 };
 
 /** Types that are also pushed via email (others are in-app + Telegram only). */
@@ -52,7 +52,7 @@ async function dispatch(notificationId: string, userId: string, input: NotifyInp
   if (!u) return;
   const deliveries: Record<string, string> = { inapp: "stored" };
 
-  if (u.telegramId && u.notifyTelegram) {
+  if (u.telegramId && u.notifyTelegram && input.telegram !== false) {
     if (!telegramEnabled()) deliveries.telegram = "disabled";
     else {
       try {

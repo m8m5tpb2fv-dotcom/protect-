@@ -7,8 +7,10 @@
  *  - Base features are free forever and are never gated (FREE_FOREVER).
  *  - Revenue is optional and comes only from channels that can be switched
  *    off independently: PRO subscription, promotion of a profile, and ads.
- *  - No acquiring in the MVP: a paid service is a request that an admin
- *    activates after the provider pays by invoice outside the platform.
+ *  - No acquiring for client ↔ provider money. Platform services are paid
+ *    either off-platform by invoice (an admin activates them) or, for
+ *    «Продвижение», with Telegram Stars inside the bot (activated by the
+ *    Bot API payment update).
  */
 
 export const CHANNELS = ["pro", "promotion", "ads"] as const;
@@ -19,7 +21,7 @@ export const FREE_FOREVER = [
   "Создание заказов и отклики — без лимитов",
   "Профиль исполнителя, услуги, цены и портфолио",
   "Чат, контакты после выбора исполнителя, отзывы",
-  "Поиск, карта, уведомления и Telegram Mini App",
+  "Поиск, карта, лента заявок, уведомления в приложении и Telegram Mini App",
   "Никакой комиссии: клиент платит исполнителю напрямую",
 ] as const;
 
@@ -35,6 +37,23 @@ export const PLANS = {
   },
 } as const;
 
+/**
+ * Subscriptions paid with Telegram Stars (currency XTR) — Telegram's required method for digital goods in bots.
+ * «Продвижение»: crown badge, instant Telegram cards about new orders nearby, higher place in search
+ * (marked «Реклама») and a work video at the top of the profile.
+ */
+export const STAR_PLANS = {
+  promo_month: {
+    id: "promo_month",
+    channel: "promotion",
+    title: "Продвижение",
+    description: "👑 Корона в профиле, мгновенные уведомления о новых заявках в Telegram, место выше в поиске и видео работы в шапке профиля.",
+    stars: 100,
+    periodDays: 30,
+  },
+} as const;
+
+/** Legacy per-period promotions, paid by invoice. Kept for existing records; no longer offered. */
 export const PROMOTIONS = {
   boost_24h: { id: "boost_24h", channel: "promotion", title: "Поднятие на 24 часа", description: "Профиль выше в поиске и категории, с пометкой «Реклама».", price: 149, hours: 24 },
   boost_7d: { id: "boost_7d", channel: "promotion", title: "Поднятие на 7 дней", description: "Неделя в верхней части выдачи, с пометкой «Реклама».", price: 690, hours: 24 * 7 },
@@ -42,19 +61,25 @@ export const PROMOTIONS = {
 } as const;
 
 export type PlanId = keyof typeof PLANS;
+export type StarPlanId = keyof typeof STAR_PLANS;
 export type PromotionId = keyof typeof PROMOTIONS;
-export type ProductId = PlanId | PromotionId;
+export type ProductId = PlanId | StarPlanId | PromotionId;
 
-export type Product = { id: ProductId; channel: Channel; title: string; description: string; price: number; kind: "subscription" | "promotion" };
+/** price is in rubles for RUB and in Stars for XTR. */
+export type Product = { id: ProductId; channel: Channel; title: string; description: string; price: number; currency: "RUB" | "XTR"; kind: "subscription" | "promotion" };
 
 export function getProduct(id: string): Product | null {
   if (id in PLANS) {
     const p = PLANS[id as PlanId];
-    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, kind: "subscription" };
+    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, currency: "RUB", kind: "subscription" };
+  }
+  if (id in STAR_PLANS) {
+    const p = STAR_PLANS[id as StarPlanId];
+    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.stars, currency: "XTR", kind: "subscription" };
   }
   if (id in PROMOTIONS) {
     const p = PROMOTIONS[id as PromotionId];
-    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, kind: "promotion" };
+    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, currency: "RUB", kind: "promotion" };
   }
   return null;
 }

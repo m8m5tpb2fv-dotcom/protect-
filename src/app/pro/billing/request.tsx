@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api-client";
+import { api, uploadFile } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/field";
@@ -81,5 +81,133 @@ export function CancelRequest({ id }: { id: string }) {
     >
       Отменить
     </Button>
+  );
+}
+
+/**
+ * Telegram Stars checkout. Inside the Mini App the invoice opens natively; on the website the t.me link
+ * opens Telegram. The service is switched on by the bot when Telegram confirms the payment, so here we
+ * only refresh the page until it shows up as active.
+ */
+export function StarsCheckout({ productId, label, active, disabled }: { productId: string; label: string; active: boolean; disabled?: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const toast = useToast();
+  const router = useRouter();
+  const wasActive = useRef(active);
+
+  useEffect(() => {
+    if (!waiting) return;
+    if (active && !wasActive.current) {
+      toast("Продвижение подключено 👑");
+      setWaiting(false);
+      return;
+    }
+    const started = Date.now();
+    const t = window.setInterval(() => {
+      if (Date.now() - started > 5 * 60_000) setWaiting(false);
+      else if (document.visibilityState === "visible") router.refresh();
+    }, 4000);
+    return () => window.clearInterval(t);
+  }, [waiting, active, router, toast]);
+
+  return (
+    <>
+      <Button
+        className="mt-4"
+        variant="accent"
+        block
+        disabled={disabled}
+        loading={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            wasActive.current = active;
+            const { link } = await api<{ link: string }>("/api/billing/stars", { body: { productId } });
+            const wa = window.Telegram?.WebApp;
+            if (wa?.openInvoice) {
+              wa.openInvoice(link, (status) => {
+                if (status === "paid") {
+                  toast("Оплата прошла, подключаем…");
+                  setWaiting(true);
+                } else if (status === "failed") toast("Оплата не прошла. Попробуйте ещё раз.", "error");
+              });
+            } else {
+              setWaiting(true);
+              window.location.href = link;
+            }
+          } catch (e) {
+            toast((e as Error).message, "error");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {label}
+      </Button>
+      {waiting && <p className="mt-2 text-center text-[13px] text-muted">Ждём подтверждение оплаты от Telegram…</p>}
+    </>
+  );
+}
+
+/** Work video shown at the top of the profile while «Продвижение» is active. */
+export function PromoVideo({ url }: { url: string | null }) {
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const save = async (next: string | null) => {
+    await api("/api/provider/promo-video", { method: "PUT", body: { url: next } });
+    router.refresh();
+  };
+  return (
+    <div className="mt-3">
+      {url && <video src={url} controls playsInline muted preload="metadata" className="mb-3 aspect-video w-full rounded-[22px] bg-black object-contain" />}
+      <input
+        ref={input}
+        type="file"
+        accept="video/mp4,video/webm,video/quicktime"
+        hidden
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setBusy(true);
+          try {
+            const r = await uploadFile(file, "promo");
+            await save(r.url);
+            toast("Видео добавлено в профиль");
+          } catch (err) {
+            toast((err as Error).message, "error");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" loading={busy} onClick={() => input.current?.click()}>
+          {url ? "Заменить видео" : "Загрузить видео"}
+        </Button>
+        {url && (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await save(null);
+              } catch (err) {
+                toast((err as Error).message, "error");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Убрать
+          </Button>
+        )}
+      </div>
+      <p className="mt-2 text-[12.5px] text-muted">MP4 или WebM, до 60 МБ. Лучше горизонтальное, 15–60 секунд.</p>
+    </div>
   );
 }

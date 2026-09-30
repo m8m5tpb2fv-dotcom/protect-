@@ -10,14 +10,16 @@ import type { CurrentUser } from "../auth/session";
 import { badRequest, conflict, forbidden, notFound } from "../http/errors";
 import { notify } from "../notifications/notify";
 import { getGeo } from "./catalog";
+import { orderPoint } from "@/lib/geo";
 import { matchingProvidersForOrder } from "./providers";
 import { logOrderEvent, recomputeProviderStats } from "./provider-stats";
 import { newOrderCard } from "../telegram/cards";
+import { instantOrderCards } from "../billing";
 
 export const OPEN_STATUSES = ["new", "responses"] as const;
 
 /** In-app + Telegram card (with «Откликнуться» / «Не интересно») for each provider who should see a new order. */
-async function notifyNewOrder(order: Order, recipients: { userId: string; distanceKm: number | null }[], direct: boolean) {
+async function notifyNewOrder(order: Order, recipients: { userId: string; distanceKm: number | null; promoUntil: Date | null }[], direct: boolean) {
   if (!recipients.length) return;
   const [[meta], [{ photos }]] = await Promise.all([
     db
@@ -35,7 +37,8 @@ async function notifyNewOrder(order: Order, recipients: { userId: string; distan
       title: direct ? "Новый заказ для вас" : "Новая заявка рядом",
       body: `«${order.title}» · ${urgencyLabel}${km}`,
       link: `/orders/${order.id}`,
-      telegram: newOrderCard({ ...order, subName: meta?.subName ?? "", districtName: meta?.districtName ?? null, distanceKm: r.distanceKm, photos, direct }),
+      // a personal order always reaches Telegram; broadcast leads do only for «Продвижение» subscribers
+      telegram: direct || instantOrderCards(r) ? newOrderCard({ ...order, subName: meta?.subName ?? "", districtName: meta?.districtName ?? null, distanceKm: r.distanceKm, photos, direct }) : false,
     });
   }
 }
@@ -64,8 +67,9 @@ export async function createOrder(user: CurrentUser, input: CreateOrderInput, ci
     .where(and(eq(orders.clientId, user.id), inArray(orders.status, [...OPEN_STATUSES])));
   if (open >= 10) throw badRequest("У вас уже 10 открытых заявок. Закройте неактуальные, чтобы создать новую.");
 
-  const lat = input.lat ?? district?.lat ?? null;
-  const lng = input.lng ?? district?.lng ?? null;
+  const point = orderPoint({ lat: input.lat ?? undefined, lng: input.lng ?? undefined }, geo.cities.find((c) => c.id === cityId), district);
+  const lat = point?.lat ?? null;
+  const lng = point?.lng ?? null;
 
   const order = await db.transaction(async (tx) => {
     const [o] = await tx
@@ -92,7 +96,7 @@ export async function createOrder(user: CurrentUser, input: CreateOrderInput, ci
     return o;
   });
 
-  if (direct) await notifyNewOrder(order, [{ userId: direct.userId, distanceKm: null }], true);
+  if (direct) await notifyNewOrder(order, [{ userId: direct.userId, distanceKm: null, promoUntil: direct.promoUntil }], true);
   else await notifyNewOrder(order, (await matchingProvidersForOrder(order)).filter((t) => t.userId !== user.id), false);
   return order;
 }

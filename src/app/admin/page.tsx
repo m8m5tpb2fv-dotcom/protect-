@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
     { l: "Конверсия в исполнителя", v: `${s.conversion.assignRate}%`, d: "заявки с выбранным исполнителем, 30 дн." },
     { l: "Конверсия в выполнение", v: `${s.conversion.completeRate}%`, d: "30 дней" },
     { l: "Время ответа", v: s.avgResponseMin != null ? `${s.avgResponseMin} мин` : "—", d: "среднее по исполнителям" },
-    { l: "Выручка платформы", v: rub(s.platformRevenue), d: `Pro, продвижение, реклама · ${rub(s.platformRevenuePeriod)} за 30 дней` },
+    { l: "Выручка платформы", v: rub(s.platformRevenue), d: `${rub(s.platformRevenuePeriod)} за 30 дней · звёздами Telegram: ${s.platformRevenueStars.toLocaleString("ru-RU")} ⭐` },
   ];
   return (
     <AdminPage title="Обзор" subtitle="Ключевые метрики маркетплейса">

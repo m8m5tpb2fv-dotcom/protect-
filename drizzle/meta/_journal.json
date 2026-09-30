@@ -43,6 +43,13 @@
       "when": 1790777666889,
       "tag": "0005_order_client_hidden",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790801355546,
+      "tag": "0006_promotion_stars",
+      "breakpoints": true
     }
   ]
 }

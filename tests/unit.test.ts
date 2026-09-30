@@ -5,6 +5,7 @@ import { decodeStartParam, encodeStartParam, miniAppUrl } from "@/lib/deeplink";
 import { newOrderCard } from "@/server/telegram/cards";
 import { parseGeocode, parseSuggest } from "@/lib/yandex-geo";
 import { clusterMarkers, parseClusterId } from "@/components/maps/cluster";
+import { haversineKm, orderPoint } from "@/lib/geo";
 import { km, plural, priceFrom, relative } from "@/lib/format";
 import { slugify } from "@/lib/slug";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
@@ -203,5 +204,20 @@ describe("map marker clustering", () => {
   it("leaves distant markers alone and rejects non-cluster ids", () => {
     expect(clusterMarkers([near[0], { id: "far", lat: 51.6, lng: 45.9 }], 12)).toHaveLength(2);
     expect(parseClusterId("a")).toBeNull();
+  });
+});
+
+describe("order point", () => {
+  const saratov = { lat: 51.533, lng: 46.034 };
+  const zavodskoy = { lat: 51.49, lng: 46.11 };
+  it("keeps a point inside the city", () => {
+    expect(orderPoint({ lat: 51.55, lng: 46.0 }, saratov, zavodskoy)).toEqual({ lat: 51.55, lng: 46.0 });
+  });
+  it("replaces a far GPS fix (client abroad) with the chosen district", () => {
+    const antalya = { lat: 36.9, lng: 30.7 };
+    expect(haversineKm(antalya, saratov)).toBeGreaterThan(2000);
+    expect(orderPoint(antalya, saratov, zavodskoy)).toEqual(zavodskoy);
+    expect(orderPoint(antalya, saratov, undefined)).toBeNull();
+    expect(orderPoint(null, saratov, zavodskoy)).toEqual(zavodskoy);
   });
 });

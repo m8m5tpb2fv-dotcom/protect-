@@ -46,3 +46,13 @@ export function webAppUrl(path = "/") {
 export function escapeHtml(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+/** Telegram Stars invoice link (currency XTR, no provider token). Opened via WebApp.openInvoice or as a t.me link. */
+export function createStarsInvoiceLink(i: { title: string; description: string; payload: string; stars: number }) {
+  return tg<string>("createInvoiceLink", { title: i.title, description: i.description, payload: i.payload, currency: "XTR", prices: [{ label: i.title, amount: i.stars }] });
+}
+
+/** Must be answered within 10 seconds of a pre_checkout_query, otherwise the payment fails. */
+export function answerPreCheckout(queryId: string, error: string | null) {
+  return tg("answerPreCheckoutQuery", error ? { pre_checkout_query_id: queryId, ok: false, error_message: error } : { pre_checkout_query_id: queryId, ok: true });
+}

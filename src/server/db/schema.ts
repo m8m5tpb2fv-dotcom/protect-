@@ -262,6 +262,9 @@ export const providers = pgTable(
     proUntil: ts("pro_until"),
     boostedUntil: ts("boosted_until"),
     highlightedUntil: ts("highlighted_until"),
+    /** «Продвижение» subscription (Telegram Stars): crown, instant order cards, higher in search, promo video. */
+    promoUntil: ts("promo_until"),
+    promoVideoUrl: text("promo_video_url"),
     searchText: text("search_text").notNull().default(""),
     createdAt: createdAt(),
     approvedAt: ts("approved_at"),
@@ -523,7 +526,11 @@ export const invoices = pgTable(
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
     productId: text("product_id").notNull(),
+    /** Rubles for invoices paid off-platform; Telegram Stars ("XTR") for in-bot payments. */
     amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("RUB"),
+    /** telegram_payment_charge_id of a Stars payment (needed for refunds); unique = one payment per invoice. */
+    telegramChargeId: text("telegram_charge_id").unique(),
     discount: integer("discount").notNull().default(0),
     promoCodeId: integer("promo_code_id"),
     status: invoiceStatus("status").notNull().default("requested"),
