@@ -19,10 +19,10 @@ const csp = [
   "media-src 'self' blob: https:",
   "connect-src 'self' https: wss:",
   "worker-src 'self' blob:",
-  "frame-src 'self' https://yoomoney.ru https://*.yookassa.ru",
+  "frame-src 'self'",
   "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
   "base-uri 'self'",
-  "form-action 'self' https://yoomoney.ru https://*.yookassa.ru",
+  "form-action 'self'",
   "object-src 'none'",
 ].join("; ");
 

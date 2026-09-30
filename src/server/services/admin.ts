@@ -2,13 +2,14 @@ import "server-only";
 import { and, asc, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db";
 import {
-  adminActions, categories, cities, contentBlocks, districts, orders, payments, promoCodes, providerDocuments, providers, reports, reviews, subcategories, supportTickets, users,
+  adminActions, ads, categories, cities, contentBlocks, districts, invoices, orders, promoCodes, providerDocuments, providers, reports, reviews, subcategories, supportTickets, users,
 } from "../db/schema";
 import type { CurrentUser } from "../auth/session";
 import { badRequest, forbidden, notFound } from "../http/errors";
 import { notify } from "../notifications/notify";
 import { invalidateCatalog } from "./catalog";
 import { recomputeProviderStats } from "./provider-stats";
+import { activate, cancelInvoice, grant } from "../billing";
 
 export async function audit(admin: CurrentUser, action: string, targetType: string, targetId: string, data?: Record<string, unknown>) {
   await db.insert(adminActions).values({ adminId: admin.id, action, targetType, targetId, data });
@@ -40,7 +41,6 @@ export async function dashboardStats(days = 30) {
     db
       .select({
         gmv: sql<number>`coalesce(sum(${orders.agreedPrice}) filter (where ${orders.status} = 'completed'), 0)::int`,
-        commission: sql<number>`coalesce(sum(${orders.commissionAmount}) filter (where ${orders.status} = 'completed'), 0)::int`,
         avgCheck: sql<number>`coalesce(avg(${orders.agreedPrice}) filter (where ${orders.status} = 'completed'), 0)::int`,
         gmvPeriod: sql<number>`coalesce(sum(${orders.agreedPrice}) filter (where ${orders.status} = 'completed' and ${orders.completedAt} >= ${since}), 0)::int`,
       })
@@ -80,10 +80,15 @@ export async function dashboardStats(days = 30) {
   ]);
   const [openReports] = await db.select({ n: sql<number>`count(*)::int` }).from(reports).where(eq(reports.status, "open"));
   const [openTickets] = await db.select({ n: sql<number>`count(*)::int` }).from(supportTickets).where(eq(supportTickets.status, "open"));
+  // Platform revenue = activated paid services only (orders never carry money for the platform).
   const [revenue] = await db
-    .select({ total: sql<number>`coalesce(sum(${payments.amount} - ${payments.discount}), 0)::int`, test: sql<boolean>`bool_and(${payments.isTest})` })
-    .from(payments)
-    .where(eq(payments.status, "succeeded"));
+    .select({
+      total: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}), 0)::int`,
+      period: sql<number>`coalesce(sum(${invoices.amount} - ${invoices.discount}) filter (where ${invoices.activatedAt} >= ${since}), 0)::int`,
+      requested: sql<number>`count(*) filter (where ${invoices.status} = 'requested')::int`,
+    })
+    .from(invoices)
+    .where(sql`${invoices.status} in ('activated', 'requested')`);
   return {
     users: u,
     providers: p,
@@ -101,8 +106,9 @@ export async function dashboardStats(days = 30) {
     userSeries: userSeries.rows.map((r) => ({ day: r.day, users: Number(r.users) })),
     openReports: openReports.n,
     openTickets: openTickets.n,
-    subscriptionRevenue: revenue.total,
-    revenueIsTest: revenue.test ?? true,
+    platformRevenue: revenue.total,
+    platformRevenuePeriod: revenue.period,
+    openInvoices: revenue.requested,
   };
 }
 
@@ -215,19 +221,23 @@ export async function adminTickets({ status, page = 1 }: ListParams) {
   return { rows, total, page, pageSize: PAGE };
 }
 
-export async function adminPayments({ status, page = 1 }: ListParams) {
-  const where = status ? eq(payments.status, status as "succeeded") : undefined;
+export async function adminInvoices({ status, page = 1 }: ListParams) {
+  const where = status ? eq(invoices.status, status as "requested") : undefined;
   const rows = await db
-    .select({ p: payments, userName: users.name, providerName: providers.displayName })
-    .from(payments)
-    .innerJoin(users, eq(users.id, payments.userId))
-    .leftJoin(providers, eq(providers.id, payments.providerId))
+    .select({ i: invoices, userName: users.name, email: users.email, providerName: providers.displayName, providerSlug: providers.slug })
+    .from(invoices)
+    .innerJoin(users, eq(users.id, invoices.userId))
+    .innerJoin(providers, eq(providers.id, invoices.providerId))
     .where(where)
-    .orderBy(desc(payments.createdAt))
+    .orderBy(desc(invoices.createdAt))
     .limit(PAGE)
     .offset((page - 1) * PAGE);
-  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(payments).where(where);
+  const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(invoices).where(where);
   return { rows, total, page, pageSize: PAGE };
+}
+
+export async function adminAds() {
+  return db.select().from(ads).orderBy(desc(ads.createdAt)).limit(100);
 }
 
 export async function adminAudit(page = 1) {
@@ -276,10 +286,15 @@ export type AdminActionInput =
   | { type: "category.update"; id: number; name?: string; isActive?: boolean; sortOrder?: number; description?: string }
   | { type: "subcategory.create"; categoryId: number; name: string; namePlural: string; slug: string; icon: string; keywords?: string }
   | { type: "subcategory.toggle"; id: number; isActive: boolean }
-  | { type: "content.update"; key: string; title: string; body: string; isActive: boolean };
+  | { type: "content.update"; key: string; title: string; body: string; isActive: boolean }
+  | { type: "invoice.activate"; id: string }
+  | { type: "invoice.cancel"; id: string; note: string }
+  | { type: "billing.grant"; slug: string; productId: string }
+  | { type: "ad.create"; slot: "home" | "category" | "search"; categoryId?: number | null; title: string; body?: string; linkUrl: string; advertiser: string; erid?: string | null; startsAt: string; endsAt: string }
+  | { type: "ad.toggle"; id: string; isActive: boolean };
 
 export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
-  const adminOnly = new Set(["user.role", "promo.create", "promo.toggle", "city.toggle", "district.create", "category.update", "subcategory.create", "subcategory.toggle", "content.update"]);
+  const adminOnly = new Set(["user.role", "promo.create", "promo.toggle", "city.toggle", "district.create", "category.update", "subcategory.create", "subcategory.toggle", "content.update", "invoice.activate", "invoice.cancel", "billing.grant", "ad.create", "ad.toggle"]);
   if (adminOnly.has(a.type) && admin.role !== "admin") throw forbidden("Действие доступно только администратору");
 
   switch (a.type) {
@@ -368,6 +383,28 @@ export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
       await db.update(subcategories).set({ isActive: a.isActive }).where(eq(subcategories.id, a.id));
       invalidateCatalog();
       break;
+    case "invoice.activate":
+      await activate(a.id, admin.id);
+      break;
+    case "invoice.cancel":
+      await cancelInvoice(admin, a.id, a.note);
+      break;
+    case "billing.grant": {
+      const [p] = await db.select({ id: providers.id }).from(providers).where(eq(providers.slug, a.slug.trim()));
+      if (!p) throw notFound("Исполнитель с таким адресом профиля не найден");
+      await grant(p.id, a.productId);
+      break;
+    }
+    case "ad.create": {
+      const startsAt = new Date(a.startsAt);
+      const endsAt = new Date(a.endsAt);
+      if (!(endsAt > startsAt)) throw badRequest("Дата окончания должна быть позже даты начала");
+      await db.insert(ads).values({ slot: a.slot, categoryId: a.categoryId ?? null, title: a.title, body: a.body ?? "", linkUrl: a.linkUrl, advertiser: a.advertiser, erid: a.erid || null, startsAt, endsAt });
+      break;
+    }
+    case "ad.toggle":
+      await db.update(ads).set({ isActive: a.isActive }).where(eq(ads.id, a.id));
+      break;
     case "content.update":
       await db
         .insert(contentBlocks)
@@ -375,7 +412,7 @@ export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
         .onConflictDoUpdate({ target: contentBlocks.key, set: { title: a.title, body: a.body, isActive: a.isActive, updatedAt: new Date() } });
       break;
   }
-  const targetId = "id" in a ? String(a.id) : "code" in a ? a.code : "key" in a ? a.key : "new";
+  const targetId = "id" in a ? String(a.id) : "code" in a ? a.code : "key" in a ? a.key : "slug" in a ? a.slug : "new";
   await audit(admin, a.type, a.type.split(".")[0], targetId, a as unknown as Record<string, unknown>);
 }
 

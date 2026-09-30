@@ -3,7 +3,9 @@
 Маркетплейс спроса и предложения: «мне нужна услуга → я быстро нахожу человека, который её выполнит».
 Один фронтенд работает в мобильном и десктопном браузере, на планшете и как **Telegram Mini App**.
 
-> Название, слоган, комиссия и город по умолчанию вынесены в `src/config/app.ts` и `.env`.
+> Название, слоган и город по умолчанию вынесены в `src/config/app.ts` и `.env`; модель монетизации — в `src/config/monetization.ts` и [docs/MONETIZATION.md](docs/MONETIZATION.md).
+>
+> **0% комиссии**: клиенты платят исполнителям напрямую, деньги за работу не проходят через платформу. Все базовые функции бесплатны; Pro, продвижение и реклама — опциональные каналы, каждый включается отдельно.
 
 ---
 
@@ -22,12 +24,12 @@
 **Исполнитель**
 - «Стать исполнителем» — 4-шаговая анкета → «Профиль на проверке».
 - Кабинет `/pro`: статус модерации, переключатель «Свободен/Занят», метрики, заявки рядом (по специализациям, району и радиусу; адрес замаскирован до выбора), прямые заказы (принять / не смогу), заказы в работе.
-- Редактор профиля, документы для верификации (приватное хранилище), услуги и цены, портфолио (фото/видео), продвижение и Pro (`/pro/billing`) с промокодами.
-- Лимит бесплатных откликов (30/мес), безлимит в Pro. Комиссия начисляется с завершённых заказов.
+- Редактор профиля, документы для верификации (приватное хранилище), услуги и цены, портфолио (фото/видео), «Продвижение» (`/pro/billing`, только если включён хотя бы один платный канал): заявка на услугу по счёту, промокоды.
+- Отклики без лимитов, без комиссии: цена заказа сохраняется только для истории, оплата — напрямую исполнителю.
 
 **Админ-панель `/admin`** (роли admin / moderator)
-- Обзор: пользователи, исполнители, заказы (активные/завершённые), GMV, комиссия, средний чек, конверсии, время ответа, новые пользователи, популярные категории и районы, графики по дням.
-- Модерация исполнителей (одобрить / отклонить с комментарием / приостановить / уровни проверки, просмотр документов), пользователи (блокировка, роли), заказы (отмена), отзывы (скрыть), жалобы, обращения (ответ → уведомление), платежи (Demo/Production явно помечены), промокоды, категории и специализации, города и районы, контент (тексты главной, FAQ), журнал действий администраторов.
+- Обзор: пользователи, исполнители, заказы (активные/завершённые), объём заказов (GMV, прямые расчёты), выручка платформы от платных услуг, средний чек, конверсии, время ответа, новые пользователи, популярные категории и районы, графики по дням.
+- Модерация исполнителей (одобрить / отклонить с комментарием / приостановить / уровни проверки, просмотр документов), пользователи (блокировка, роли), заказы (отмена), отзывы (скрыть), жалобы, обращения (ответ → уведомление), платные услуги (заявки по счёту → «Оплачено — подключить», бесплатная выдача), реклама (кампании с erid, показы и клики), промокоды, категории и специализации, города и районы, контент (тексты главной, FAQ), журнал действий администраторов.
 
 **Платформа**: PWA (manifest, иконки, service worker, офлайн-экран), тёмная/светлая/системная/Telegram тема, sitemap/robots, ошибки 404/500/offline, скелетоны, reduced motion, клавиатурная навигация, ARIA.
 
@@ -36,18 +38,19 @@
 ```
 src/
   app/                 Next.js App Router: страницы (RSC) + /api (route handlers)
-    api/               REST API: auth, orders, conversations, uploads, provider, payments, admin, telegram
+    api/               REST API: auth, orders, conversations, uploads, provider, billing, ads, admin, telegram
     art/…              детерминированные SVG-иллюстрации для демо-данных
     files/[...key]     раздача загруженных файлов (private/* — никогда)
   components/          ui/ (примитивы), layout/, domain/, maps/ (адаптеры карт), telegram/, admin/
-  config/app.ts        бренд, комиссия, тарифы
+  config/app.ts        бренд, город
+  config/monetization.ts  0% комиссии: бесплатное ядро, каталог платных услуг, каналы
   lib/                 общий код клиента и сервера: форматирование, валидация (zod), deep links, гео
   server/
     db/                Drizzle schema, клиент, seed (справочники + демо)
     auth/              сессии, пароли (scrypt), email/телефон/Telegram
     http/              обёртка API: CSRF, rate limit, ошибки, валидация
     services/          бизнес-логика: providers/search, orders, chat, account, admin, provider-self
-    payments/          абстракция платёжного шлюза: sandbox | ЮKassa
+    billing/           опциональные каналы (pro, promotion, ads): перки, заявки по счёту, активация — без эквайринга
     storage/           абстракция хранилища: local | S3; обработка изображений (sharp)
     notifications/     in-app + Telegram + email/SMS каналы
     telegram/          Bot API, проверка initData, обработчики webhook
@@ -61,12 +64,12 @@ tests/                 vitest: unit + интеграционные тесты н
 - **Сервисный слой** не зависит от HTTP: его используют и страницы (RSC), и API, и тесты.
 - **Город — сущность** (`cities`, `districts`); Энгельс, Самара, Волгоград, Казань уже в базе со статусом «скоро» и включаются в админке.
 - **Таксономия**: `categories` (12 групп) → `subcategories` (48 специализаций) → `services` (100+ типовых задач с ценами).
-- **Поиск**: `pg_trgm` по денормализованному `search_text` + сопоставление запроса со справочником (синонимы/ключевые слова), байесовский рейтинг, поднятые (оплаченные) профили помечены «Реклама».
+- **Поиск**: `pg_trgm` по денормализованному `search_text` + сопоставление запроса со справочником (синонимы/ключевые слова), байесовский рейтинг, поднятые (оплаченные) профили помечены «Реклама» и влияют на порядок только при включённом канале `promotion`.
 - **Карты**: интерфейс `MapAdapter` с реализациями Leaflet/OSM (без ключа), Яндекс Карты v3, 2ГИС MapGL.
 - **Реалтайм** чата и счётчиков — polling (работает на любом хостинге, в т. ч. serverless). Точка расширения — SSE/WebSocket.
 
 ### База данных (PostgreSQL)
-`users, sessions, otp_codes, locations, cities, districts, categories, subcategories, services, providers, provider_subcategories, provider_districts, provider_services, portfolio_items, provider_documents, orders, order_photos, order_events, order_responses, conversations, messages, reviews, favorites, notifications, payments, subscriptions, promotions, promo_codes, reports, support_tickets, admin_actions, content_blocks`.
+`users, sessions, otp_codes, locations, cities, districts, categories, subcategories, services, providers, provider_subcategories, provider_districts, provider_services, portfolio_items, provider_documents, orders, order_photos, order_events, order_responses, conversations, messages, reviews, favorites, notifications, invoices, subscriptions, promotions, promo_codes, ads, reports, support_tickets, admin_actions, content_blocks`.
 
 ## 3. Стек
 Next.js 16 (App Router, React 19, TypeScript) · Tailwind CSS 4 (собственная дизайн-система) · PostgreSQL 14+ · Drizzle ORM · zod · sharp · Leaflet · lucide · Vitest · Playwright (скриншоты).
@@ -113,11 +116,12 @@ npm run dev                        # http://localhost:3000
 ## 10. Карты
 `NEXT_PUBLIC_MAP_PROVIDER=leaflet` (по умолчанию, тайлы OpenStreetMap, ключ не нужен; при большой нагрузке переходите на Яндекс/2ГИС — политика использования tile.openstreetmap.org) | `yandex` (+`NEXT_PUBLIC_YANDEX_MAPS_API_KEY`) | `2gis` (+`NEXT_PUBLIC_2GIS_API_KEY`). Добавить провайдера — реализовать `MapAdapter` в `src/components/maps/adapters.ts`. При ошибке загрузки провайдера — фолбэк на Leaflet.
 
-## 11. Платежи
-Абстракция `PaymentGateway` (`src/server/payments`).
-- `PAYMENT_GATEWAY=sandbox` (по умолчанию) — **тестовый** шлюз: страница `/pay/sandbox/<id>` с огромной пометкой «Тестовая оплата», кнопки «успех / ошибка». В кабинете и админке платежи помечены «тест».
-- `PAYMENT_GATEWAY=yookassa` + `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` — реальные платежи (redirect-подтверждение, idempotence key). Webhook: `POST /api/payments/yookassa` — статус всегда перепроверяется запросом к API ЮKassa. Выдача услуги идемпотентна.
-Продукты: подписка Pro, поднятие 24ч/7д, выделение карточки; промокоды.
+## 11. Монетизация и платежи
+Подробно — [docs/MONETIZATION.md](docs/MONETIZATION.md).
+- **0% комиссии.** Клиент платит исполнителю напрямую; у заказов нет платёжного состояния, у исполнителей нет баланса.
+- **Эквайринга нет.** Платформа не принимает онлайн-оплату. Платные услуги (Pro, поднятие, выделение) исполнитель запрашивает в «Продвижении», админ выставляет счёт вне платформы и после оплаты нажимает «Оплачено — подключить».
+- **Каналы опциональны:** `MONETIZATION_CHANNELS=pro,promotion,ads` (любая комбинация). Пусто — сервис полностью бесплатный: раздела «Продвижение» нет, реклама не показывается, ранее подключённые перки не действуют.
+- **Реклама** — блоки на главной, в категориях и поиске, всегда с пометкой «Реклама», рекламодателем и erid.
 
 ## 12. Деплой
 - **VPS/Docker**: `docker compose up -d --build` (приложение + PostgreSQL, миграции при старте). Поставьте перед ним Caddy/Nginx с HTTPS.
@@ -125,29 +129,28 @@ npm run dev                        # http://localhost:3000
 - **Railway** (`railway.json` уже в репозитории — сборка по Dockerfile, health-check `/api/health`):
   1. New Project → Deploy from GitHub repo → этот репозиторий (ветка в Settings → Source).
   2. В проекте: **+ New → Database → PostgreSQL**.
-  3. В сервисе приложения → Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (≥ 10 символов), `DEMO_MODE=true` для демо-данных.
+  3. В сервисе приложения → Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `SESSION_SECRET` (`openssl rand -hex 32`), `ADMIN_EMAIL`, `ADMIN_PASSWORD` (≥ 10 символов), `DEMO_MODE=true` для демо-данных, по желанию `MONETIZATION_CHANNELS`.
   4. Settings → Networking → **Generate Domain**. Адрес подхватится из `RAILWAY_PUBLIC_DOMAIN` сам (или задайте `APP_URL`/`NEXT_PUBLIC_APP_URL`).
   5. Загрузки: подключите Volume с путём `/app/storage` и добавьте `RAILWAY_RUN_UID=0` (том монтируется от root), либо `STORAGE_DRIVER=s3`.
   При каждом старте `scripts/start.sh` применяет миграции и идемпотентный сид (справочники, админ, демо при `DEMO_MODE=true`).
 - `GET /api/health` — health-check (проверяет БД).
 
 ## 13. Готово и работает
-Всё из раздела 1: регистрация/вход (email, телефон с кодом, Telegram), заявки и отклики, выбор исполнителя, статусы, чат с фото и прочтением, уведомления (in-app, Telegram), отзывы, избранное, анкета и кабинет исполнителя, модерация, аналитика, промокоды, sandbox-оплата с реальной выдачей услуг, загрузка и обработка файлов, поиск, геолокация, карты, PWA.
+Всё из раздела 1: регистрация/вход (email, телефон с кодом, Telegram), заявки и отклики, выбор исполнителя, статусы, чат с фото и прочтением, уведомления (in-app, Telegram), отзывы, избранное, анкета и кабинет исполнителя, модерация, аналитика, промокоды, опциональные платные услуги по счёту и реклама, загрузка и обработка файлов, поиск, геолокация, карты, PWA.
 
 ## 14. Что пока mock / требует ключей
 | Функция | Сейчас | Для production |
 |---|---|---|
 | SMS-коды | `SMS_PROVIDER=console`: код в логе и (в DEMO_MODE) на экране | `SMS_PROVIDER=smsru` + `SMSRU_API_KEY` |
 | Email | `console` | `EMAIL_PROVIDER=resend` + ключ |
-| Оплата | sandbox (явно помечен) | ЮKassa |
 | Telegram | без токена сообщения только логируются | токен + webhook |
 | Фото в демо-данных | сгенерированные SVG-иллюстрации (без реальных людей) | фото загружают исполнители |
-| Оплата комиссии исполнителем | начисляется на баланс, списание не подключено | подключить после выбора модели расчётов |
+| Платные услуги платформы | заявка → счёт вне платформы → активация админом | при желании онлайн-оплата: адаптер, вызывающий `activate()` (см. docs/MONETIZATION.md) |
 
 ## 15. Перед production
 - `DEMO_MODE=false` (выключает демо-вход и показ кодов), сильный `SESSION_SECRET`, HTTPS, резервные копии БД.
 - Не загружать демо-данные (`npm run db:seed` без `--demo`).
-- Подключить SMS, email, ЮKassa, S3, Telegram-бота; Яндекс Карты при необходимости.
+- Подключить SMS, email, S3, Telegram-бота; Яндекс Карты при необходимости. Решить, какие платные каналы включить (`MONETIZATION_CHANNELS`, можно ни одного).
 - Rate limiter — in-memory: для нескольких инстансов вынести в Redis (интерфейс в `src/server/http/rate-limit.ts`).
 - Мониторинг ошибок (Sentry) — `src/server/log.ts`; при желании строгий CSP с nonce.
 - Юридическое: оферта, политика ПДн (152-ФЗ, хранение данных в РФ), согласие на обработку.
@@ -166,4 +169,4 @@ npm run dev                        # http://localhost:3000
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build
 ```
-Тесты используют отдельную БД `ryadom_test` (`TEST_DATABASE_URL`): unit (initData, телефоны, deep links, валидация, пароли, rate limit) и интеграционные сценарии A/B, права доступа, авторизация, платежи.
+Тесты используют отдельную БД `ryadom_test` (`TEST_DATABASE_URL`): unit (initData, телефоны, deep links, валидация, пароли, rate limit) и интеграционные сценарии A/B, права доступа, авторизация, нулевая комиссия и безлимитные отклики, платные услуги по счёту, реклама, выключенные каналы.

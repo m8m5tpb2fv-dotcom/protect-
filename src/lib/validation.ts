@@ -130,7 +130,7 @@ export const profileUpdateSchema = z.object({
   notifyTelegram: z.boolean().optional(),
 });
 
-export const checkoutSchema = z.object({ productId: z.string().min(1).max(40), promoCode: z.string().trim().toUpperCase().max(40).optional() });
+export const serviceRequestSchema = z.object({ productId: z.string().min(1).max(40), promoCode: z.string().trim().toUpperCase().max(40).optional() });
 
 export const searchQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),

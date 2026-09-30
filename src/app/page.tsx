@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, ClipboardList, LayoutGrid, MessageSquareText, Radio, Sparkles, Zap } from "lucide-react";
 import { listClientOrders } from "@/server/services/orders";
 import { LiveOrder } from "@/components/domain/live-order";
-import { APP } from "@/config/app";
 import { getCurrentUser } from "@/server/auth/session";
 import { getCatalog, getCurrentCity } from "@/server/services/catalog";
 import { favoriteIds, listProviders, providerCounts } from "@/server/services/providers";
@@ -17,6 +16,7 @@ import { CatalogIcon } from "@/components/ui/catalog-icon";
 import { StatusDot } from "@/components/ui/badge";
 import { SiteFooter } from "@/components/layout/footer";
 import { pl } from "@/lib/format";
+import { AdSlot } from "@/components/domain/ad-slot";
 
 export default async function HomePage() {
   const [user, city, catalog] = await Promise.all([getCurrentUser(), getCurrentCity(), getCatalog()]);
@@ -124,6 +124,8 @@ export default async function HomePage() {
         </Rail>
       </section>
 
+      <AdSlot slot="home" className="mt-10 lg:mt-16" />
+
       <section className="mt-10 lg:mt-16">
         <SectionHeader title="Свободны прямо сейчас" subtitle="Быстро отвечают и готовы выехать" action={<Link href="/search?available=1" className="text-[15px] font-semibold text-ink-2 hover:text-ink">Все</Link>} />
         <Rail>
@@ -199,7 +201,7 @@ export default async function HomePage() {
               <BriefcaseBusiness className="h-6 w-6" />
             </span>
             <h2 className="display mt-5 text-[32px] md:text-[44px]">Оказываете услуги?</h2>
-            <p className="mt-3 max-w-md text-[16px] leading-relaxed text-ink-2">Получайте заявки от клиентов рядом. Профиль и отклики — бесплатно, комиссия {Math.round(APP.commissionRate * 100)}% только с выполненных заказов.</p>
+            <p className="mt-3 max-w-md text-[16px] leading-relaxed text-ink-2">Получайте заявки от клиентов рядом. Профиль и отклики — бесплатно, без комиссии: клиенты платят вам напрямую.</p>
             <Link href="/become-provider" className={buttonClass({ variant: "primary", size: "lg", className: "mt-6 rounded-full" })}>
               Стать исполнителем <ArrowRight className="h-5 w-5" />
             </Link>

@@ -4,7 +4,7 @@ import { z } from "zod";
 /**
  * Server-side environment. Never import from client components.
  * Missing optional integrations switch the corresponding adapter to a safe
- * local / sandbox implementation instead of failing.
+ * local / console implementation instead of failing.
  */
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -23,9 +23,8 @@ const schema = z.object({
   S3_ACCESS_KEY_ID: z.string().default(""),
   S3_SECRET_ACCESS_KEY: z.string().default(""),
   S3_PUBLIC_URL: z.string().default(""),
-  PAYMENT_GATEWAY: z.enum(["sandbox", "yookassa"]).default("sandbox"),
-  YOOKASSA_SHOP_ID: z.string().default(""),
-  YOOKASSA_SECRET_KEY: z.string().default(""),
+  /** Optional revenue channels: "pro,promotion,ads". Empty = everything free, no paid offers anywhere. */
+  MONETIZATION_CHANNELS: z.string().default(""),
   SMS_PROVIDER: z.enum(["console", "smsru"]).default("console"),
   SMSRU_API_KEY: z.string().default(""),
   EMAIL_PROVIDER: z.enum(["console", "resend"]).default("console"),

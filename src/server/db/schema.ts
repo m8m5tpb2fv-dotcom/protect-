@@ -32,8 +32,9 @@ export const orderStatus = pgEnum("order_status", [
 export const urgency = pgEnum("urgency", ["urgent", "today", "week", "flexible"]);
 export const responseStatus = pgEnum("response_status", ["pending", "accepted", "declined", "withdrawn"]);
 export const messageKind = pgEnum("message_kind", ["text", "image", "system", "file", "voice", "location"]);
-export const paymentStatus = pgEnum("payment_status", ["pending", "succeeded", "failed", "cancelled", "refunded"]);
-export const paymentPurpose = pgEnum("payment_purpose", ["subscription", "promotion", "order"]);
+/** Paid platform service (PRO / promotion) paid by invoice outside the platform, activated by an admin. */
+export const invoiceStatus = pgEnum("invoice_status", ["requested", "activated", "cancelled"]);
+export const adSlot = pgEnum("ad_slot", ["home", "category", "search"]);
 export const reportStatus = pgEnum("report_status", ["open", "resolved", "rejected"]);
 export const ticketStatus = pgEnum("ticket_status", ["open", "answered", "closed"]);
 export const portfolioKind = pgEnum("portfolio_kind", ["image", "video"]);
@@ -239,7 +240,6 @@ export const providers = pgTable(
     proUntil: ts("pro_until"),
     boostedUntil: ts("boosted_until"),
     highlightedUntil: ts("highlighted_until"),
-    balance: integer("balance").notNull().default(0), // accrued commission debt (negative) or credit
     searchText: text("search_text").notNull().default(""),
     createdAt: createdAt(),
     approvedAt: ts("approved_at"),
@@ -338,8 +338,8 @@ export const orders = pgTable(
     /** When the order was created from a provider profile it is sent to that provider only. */
     directProviderId: uuid("direct_provider_id").references(() => providers.id, { onDelete: "set null" }),
     providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
+    /** Informational only: the client pays the provider directly, the platform takes no commission. */
     agreedPrice: integer("agreed_price"),
-    commissionAmount: integer("commission_amount"),
     cancelReason: text("cancel_reason"),
     createdAt: createdAt(),
     assignedAt: ts("assigned_at"),
@@ -473,30 +473,31 @@ export const notifications = pgTable(
   (t) => [index("notifications_user_idx").on(t.userId, t.createdAt)],
 );
 
-/* ───────────────────────────── money ───────────────────────────── */
+/* ───────────────────────────── monetisation (optional channels) ───────────────────────────── */
 
-export const payments = pgTable(
-  "payments",
+/**
+ * A provider's request for a paid platform service. There is no acquiring:
+ * the provider pays by invoice outside the platform and an admin activates it.
+ * Client ↔ provider money never appears in this table.
+ */
+export const invoices = pgTable(
+  "invoices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    number: serial("number").notNull(),
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
-    gateway: text("gateway").notNull(), // sandbox | yookassa
-    isTest: boolean("is_test").notNull().default(true),
-    externalId: text("external_id"),
-    purpose: paymentPurpose("purpose").notNull(),
+    providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
     productId: text("product_id").notNull(),
     amount: integer("amount").notNull(),
     discount: integer("discount").notNull().default(0),
     promoCodeId: integer("promo_code_id"),
-    currency: text("currency").notNull().default("RUB"),
-    status: paymentStatus("status").notNull().default("pending"),
-    failureReason: text("failure_reason"),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    status: invoiceStatus("status").notNull().default("requested"),
+    note: text("note"),
     createdAt: createdAt(),
-    paidAt: ts("paid_at"),
+    activatedAt: ts("activated_at"),
+    activatedBy: uuid("activated_by").references(() => users.id, { onDelete: "set null" }),
   },
-  (t) => [index("payments_user_idx").on(t.userId), uniqueIndex("payments_external_idx").on(t.gateway, t.externalId)],
+  (t) => [index("invoices_provider_idx").on(t.providerId, t.createdAt), index("invoices_status_idx").on(t.status)],
 );
 
 export const subscriptions = pgTable("subscriptions", {
@@ -504,7 +505,8 @@ export const subscriptions = pgTable("subscriptions", {
   providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
   plan: text("plan").notNull(),
   status: text("status").notNull().default("active"), // active | expired | cancelled
-  paymentId: uuid("payment_id").references(() => payments.id),
+  /** null = granted by an admin for free (trial, partner, support). */
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
   startsAt: ts("starts_at").notNull(),
   endsAt: ts("ends_at").notNull(),
   createdAt: createdAt(),
@@ -514,7 +516,7 @@ export const promotions = pgTable("promotions", {
   id: uuid("id").primaryKey().defaultRandom(),
   providerId: uuid("provider_id").notNull().references(() => providers.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(), // boost_24h | boost_7d | highlight_7d
-  paymentId: uuid("payment_id").references(() => payments.id),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
   startsAt: ts("starts_at").notNull(),
   endsAt: ts("ends_at").notNull(),
   createdAt: createdAt(),
@@ -530,6 +532,32 @@ export const promoCodes = pgTable("promo_codes", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: createdAt(),
 });
+
+/**
+ * Advertising placements (channel "ads"). Always rendered with the «Реклама» label,
+ * the advertiser and the ad-marking token (erid) required by 38-ФЗ.
+ */
+export const ads = pgTable(
+  "ads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slot: adSlot("slot").notNull(),
+    /** Optional targeting: show only in this category (slot "category"). */
+    categoryId: integer("category_id").references(() => categories.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    linkUrl: text("link_url").notNull(),
+    advertiser: text("advertiser").notNull(),
+    erid: text("erid"),
+    startsAt: ts("starts_at").notNull(),
+    endsAt: ts("ends_at").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    impressions: integer("impressions").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("ads_slot_idx").on(t.slot, t.isActive)],
+);
 
 /* ───────────────────────────── trust & safety ───────────────────────────── */
 
@@ -662,10 +690,6 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 export const favoritesRelations = relations(favorites, ({ one }) => ({
   provider: one(providers, { fields: [favorites.providerId], references: [providers.id] }),
 }));
-export const paymentsRelations = relations(payments, ({ one }) => ({
-  user: one(users, { fields: [payments.userId], references: [users.id] }),
-  provider: one(providers, { fields: [payments.providerId], references: [providers.id] }),
-}));
 export const reportsRelations = relations(reports, ({ one }) => ({
   reporter: one(users, { fields: [reports.reporterId], references: [users.id] }),
 }));
@@ -693,4 +717,5 @@ export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Review = typeof reviews.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
-export type Payment = typeof payments.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type Ad = typeof ads.$inferSelect;

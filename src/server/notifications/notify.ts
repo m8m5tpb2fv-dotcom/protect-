@@ -16,13 +16,13 @@ export type NotificationType =
   | "review.new"
   | "reminder"
   | "provider.moderation"
-  | "payment"
+  | "billing"
   | "system";
 
 export type NotifyInput = { type: NotificationType; title: string; body?: string; link?: string };
 
 /** Types that are also pushed via email (others are in-app + Telegram only). */
-const EMAIL_TYPES = new Set<NotificationType>(["order.assigned", "provider.moderation", "payment", "review.new"]);
+const EMAIL_TYPES = new Set<NotificationType>(["order.assigned", "provider.moderation", "billing", "review.new"]);
 
 function runLater(fn: () => Promise<void>) {
   try {

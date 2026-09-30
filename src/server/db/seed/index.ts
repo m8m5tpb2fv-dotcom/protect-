@@ -71,7 +71,7 @@ export async function seedReference(db: DB) {
       { key: "home.urgent", title: "Нужна помощь срочно?", body: "Опишите задачу — исполнители рядом получат уведомление и ответят в течение нескольких минут." },
       { key: "home.announcement", title: "Мы запустились в Саратове", body: "Скоро — Энгельс, Самара, Волгоград и Казань.", isActive: true },
       { key: "faq.how", title: "Как это работает?", body: "Вы описываете задачу, исполнители присылают отклики с ценой и сроками. Вы выбираете подходящего и договариваетесь в чате." },
-      { key: "faq.price", title: "Сколько стоит?", body: "Для клиентов сервис бесплатный. Исполнители платят небольшую комиссию с выполненных заказов." },
+      { key: "faq.price", title: "Сколько стоит?", body: "Бесплатно для всех. Комиссии нет ни с клиента, ни с исполнителя: за работу вы платите исполнителю напрямую." },
       { key: "faq.verify", title: "Что значит «Проверенный»?", body: "Платформа проверила документы исполнителя. Это статус модерации платформы, а не юридическая гарантия качества работ." },
     ])
     .onConflictDoNothing();
@@ -196,7 +196,7 @@ export async function seedDemo(db: DB) {
         clientsCount: Math.round(ordersCompleted * (0.7 + rand() * 0.2)),
         repeatClientsPct: int(12, 48),
         responseTimeMin: opts.demo ? 7 : pick([3, 5, 7, 10, 12, 15, 20, 30, 45, 60]),
-        proUntil: verification === "pro" ? daysAgo(-int(5, 25)) : null,
+        proUntil: rand() < 0.12 ? daysAgo(-int(5, 25)) : null,
         boostedUntil: rand() < 0.08 ? daysAgo(-int(1, 5)) : null,
         highlightedUntil: rand() < 0.05 ? daysAgo(-int(1, 5)) : null,
         createdAt: daysAgo(int(60, 600)),
@@ -322,7 +322,7 @@ export async function seedDemo(db: DB) {
   const [cleaner] = await provOf(uborka.id);
   const done = await mkOrder({
     clientId: demoClient.id, subcategoryId: uborka.id, title: "Генеральная уборка", description: "Двухкомнатная квартира 54 м², нужно помыть окна и кухню.",
-    urgency: "week", status: "completed", providerId: cleaner.id, agreedPrice: 5500, commissionAmount: Math.round(5500 * 0.08), createdAt: daysAgo(9), assignedAt: daysAgo(9, -3), startedAt: daysAgo(7), completedAt: daysAgo(7, -4),
+    urgency: "week", status: "completed", providerId: cleaner.id, agreedPrice: 5500, createdAt: daysAgo(9), assignedAt: daysAgo(9, -3), startedAt: daysAgo(7), completedAt: daysAgo(7, -4),
   });
   await db.insert(s.orderEvents).values([
     { orderId: done.id, actorId: demoClient.id, type: "assigned", createdAt: daysAgo(9, -3) },
@@ -334,7 +334,7 @@ export async function seedDemo(db: DB) {
   const [nails] = await provOf(manikyur.id);
   const reviewed = await mkOrder({
     clientId: demoClient.id, subcategoryId: manikyur.id, title: "Маникюр с покрытием", description: "Классический маникюр и однотонное покрытие.",
-    urgency: "week", status: "completed", providerId: nails.id, agreedPrice: 1600, commissionAmount: 128, createdAt: daysAgo(30), assignedAt: daysAgo(30), completedAt: daysAgo(27),
+    urgency: "week", status: "completed", providerId: nails.id, agreedPrice: 1600, createdAt: daysAgo(30), assignedAt: daysAgo(30), completedAt: daysAgo(27),
   });
   await db.insert(s.reviews).values({ orderId: reviewed.id, providerId: nails.id, authorId: demoClient.id, rating: 5, text: "Очень аккуратно и красиво, держится уже три недели. Запишусь ещё!", createdAt: daysAgo(26) });
   await db.insert(s.orderEvents).values({ orderId: reviewed.id, actorId: nails.userId, type: "completed", createdAt: daysAgo(27) });
@@ -367,7 +367,7 @@ export async function seedDemo(db: DB) {
     const price = pick([900, 1200, 1500, 2500, 3400]);
     const o = await mkOrder({
       clientId: client.id, subcategoryId: santehnik.id, title: pick(["Устранить протечку", "Прочистить засор", "Установить смеситель", "Установить унитаз"]), description: "Заказ выполнен.",
-      status: "completed", providerId: demoProvider.id, agreedPrice: price, commissionAmount: Math.round(price * 0.08), createdAt: daysAgo(10 + i * 9), assignedAt: daysAgo(10 + i * 9), completedAt: daysAgo(9 + i * 9),
+      status: "completed", providerId: demoProvider.id, agreedPrice: price, createdAt: daysAgo(10 + i * 9), assignedAt: daysAgo(10 + i * 9), completedAt: daysAgo(9 + i * 9),
     });
     await db.insert(s.orderResponses).values({ orderId: o.id, providerId: demoProvider.id, message: "Готов приехать.", price, status: "accepted", createdAt: new Date(o.createdAt.getTime() + int(3, 12) * 60000) });
     if (i < 4) await db.insert(s.reviews).values({ orderId: o.id, providerId: demoProvider.id, authorId: client.id, rating: i === 2 ? 4 : 5, text: i === 2 ? REVIEW_TEXTS_4[0] : REVIEW_TEXTS_5[i], createdAt: daysAgo(8 + i * 9) });
@@ -383,14 +383,11 @@ export async function seedDemo(db: DB) {
     await mkOrder({
       clientId: pick(clients.slice(1)).id, subcategoryId: p.primarySubcategoryId, title: svcOf(p.primarySubcategoryId)?.name ?? "Заказ", description: "Заказ через платформу.",
       status, providerId: status === "cancelled" ? null : p.id, agreedPrice: status === "cancelled" ? null : price,
-      commissionAmount: status === "completed" ? Math.round(price * 0.08) : null,
       createdAt: daysAgo(age), assignedAt: status === "cancelled" ? null : daysAgo(age, -1), completedAt: status === "completed" ? daysAgo(Math.max(0, age - 1)) : null, cancelledAt: status === "cancelled" ? daysAgo(age, -3) : null,
     });
   }
 
   for (const c of created) await recomputeProviderStats(db, c.id);
-  // accrued commission for completed platform orders
-  await db.execute(sql`update providers p set balance = -coalesce((select sum(o.commission_amount) from orders o where o.provider_id = p.id and o.status = 'completed'), 0)`);
   await recomputeProviderStats(db, demoProvider.id);
   await db.update(s.providers).set({ responseTimeMin: 7 }).where(eq(s.providers.id, demoProvider.id));
 
@@ -432,19 +429,37 @@ export async function seedDemo(db: DB) {
     { userId: demoProviderUser.id, type: "order.assigned", title: "Вас выбрали исполнителем", body: "«Поменять сифон под раковиной»", link: `/orders/${direct.id}`, createdAt: daysAgo(0, 5) },
   ]);
 
-  /* monetisation history (sandbox) */
-  const pros = actives.filter((p) => p.verification === "pro").slice(0, 12);
+  /* optional monetisation history: paid by invoice outside the platform, activated by an admin */
+  const [admin] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.role, "admin")).limit(1);
+  const pros = actives.filter((p) => p.proUntil && p.proUntil.getTime() > Date.now());
   for (const p of pros) {
-    const [pay] = await db
-      .insert(s.payments)
-      .values({ userId: p.userId, providerId: p.id, gateway: "sandbox", isTest: true, purpose: "subscription", productId: "pro_month", amount: 990, status: "succeeded", createdAt: daysAgo(int(1, 25)), paidAt: daysAgo(int(1, 25)) })
+    const at = daysAgo(int(1, 25));
+    const [inv] = await db
+      .insert(s.invoices)
+      .values({ userId: p.userId, providerId: p.id, productId: "pro_month", amount: 990, status: "activated", createdAt: at, activatedAt: at, activatedBy: admin?.id ?? null })
       .returning();
-    await db.insert(s.subscriptions).values({ providerId: p.id, plan: "pro_month", paymentId: pay.id, startsAt: pay.createdAt, endsAt: p.proUntil ?? daysAgo(-10) });
+    await db.insert(s.subscriptions).values({ providerId: p.id, plan: "pro_month", invoiceId: inv.id, startsAt: at, endsAt: p.proUntil! });
   }
-  for (let i = 0; i < 14; i++) {
-    const p = pick(actives);
-    await db.insert(s.payments).values({ userId: p.userId, providerId: p.id, gateway: "sandbox", isTest: true, purpose: "promotion", productId: pick(["boost_24h", "boost_7d", "highlight_7d"]), amount: pick([149, 690, 390]), status: rand() < 0.9 ? "succeeded" : "failed", createdAt: daysAgo(int(1, 60)) });
+  const promoPrices = { boost_24h: 149, boost_7d: 690, highlight_7d: 390 } as const;
+  for (const p of actives.filter((x) => x.boostedUntil || x.highlightedUntil)) {
+    const productId = p.highlightedUntil ? "highlight_7d" : pick(["boost_24h", "boost_7d"] as const);
+    const at = daysAgo(int(0, 3));
+    const [inv] = await db
+      .insert(s.invoices)
+      .values({ userId: p.userId, providerId: p.id, productId, amount: promoPrices[productId], status: "activated", createdAt: at, activatedAt: at, activatedBy: admin?.id ?? null })
+      .returning();
+    await db.insert(s.promotions).values({ providerId: p.id, kind: productId, invoiceId: inv.id, startsAt: at, endsAt: (p.highlightedUntil ?? p.boostedUntil)! });
   }
+  for (const [i, p] of actives.filter((x) => !x.proUntil).slice(0, 4).entries()) {
+    const productId = (["pro_month", "boost_7d", "highlight_7d", "boost_24h"] as const)[i];
+    const amount = productId === "pro_month" ? 990 : promoPrices[productId];
+    await db.insert(s.invoices).values({ userId: p.userId, providerId: p.id, productId, amount, status: i === 3 ? "cancelled" : "requested", note: i === 3 ? "Передумал" : null, createdAt: daysAgo(i) });
+  }
+  /* sample ad campaigns — fictional advertiser, shown only when the "ads" channel is on */
+  await db.insert(s.ads).values([
+    { slot: "home", title: "Скидка 15% на стройматериалы", body: "Доставка по Саратову в день заказа. Пример рекламного объявления.", linkUrl: "https://example.com/stroy", advertiser: "ООО «Пример Стройторг» (демо)", erid: "DEMO2Vtzq1", startsAt: daysAgo(10), endsAt: daysAgo(-30), impressions: 1840, clicks: 37 },
+    { slot: "search", title: "Химчистка мебели на дому", body: "Пример рекламы в поиске.", linkUrl: "https://example.com/clean", advertiser: "ИП Пример (демо)", erid: "DEMO2Vtzq2", startsAt: daysAgo(5), endsAt: daysAgo(-20), impressions: 920, clicks: 21 },
+  ]);
   await db.insert(s.promoCodes).values([
     { code: "WELCOME10", discountPct: 10, maxUses: 500 },
     { code: "PRO50", discountPct: 50, maxUses: 100, validUntil: daysAgo(-60) },

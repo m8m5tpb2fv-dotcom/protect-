@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { APP } from "@/config/app";
 import { getCatalog } from "@/server/services/catalog";
+import { anyChannelOn } from "@/server/billing";
 import { Logo } from "./logo";
 
 export async function SiteFooter() {
@@ -28,7 +29,7 @@ export async function SiteFooter() {
             <ul className="space-y-2">
               <li><Link href="/become-provider" className="hover:text-ink">Стать исполнителем</Link></li>
               <li><Link href="/pro" className="hover:text-ink">Кабинет</Link></li>
-              <li><Link href="/pro/billing" className="hover:text-ink">Продвижение и Pro</Link></li>
+              {anyChannelOn() && <li><Link href="/pro/billing" className="hover:text-ink">Продвижение</Link></li>}
             </ul>
           </div>
           <div className="col-span-2 sm:col-span-1">

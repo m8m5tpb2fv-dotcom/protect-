@@ -236,7 +236,7 @@ export function OrderActions({ orderId, role, status, isDirectToMe, isAssignedTo
           </Button>
         }
       >
-        <Input label="Итоговая стоимость, ₽" inputMode="numeric" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value.replace(/\D/g, "").slice(0, 8))} hint="Оплата производится напрямую исполнителю. Платформа удерживает комиссию с исполнителя." />
+        <Input label="Итоговая стоимость, ₽" inputMode="numeric" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value.replace(/\D/g, "").slice(0, 8))} hint="Для истории заказа. Оплата — напрямую исполнителю, платформа комиссию не берёт." />
       </Sheet>
     </>
   );

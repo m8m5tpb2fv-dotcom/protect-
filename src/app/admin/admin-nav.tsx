@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardList, CreditCard, FileText, Flag, FolderTree, History, LifeBuoy, MapPinned, MessageSquareQuote, Tag, UserCheck, Users } from "lucide-react";
+import { BarChart3, ClipboardList, FileText, Megaphone, ReceiptText, Flag, FolderTree, History, LifeBuoy, MapPinned, MessageSquareQuote, Tag, UserCheck, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const NAV = [
@@ -12,7 +12,8 @@ const NAV = [
   { href: "/admin/reviews", label: "Отзывы", icon: MessageSquareQuote },
   { href: "/admin/reports", label: "Жалобы", icon: Flag },
   { href: "/admin/tickets", label: "Обращения", icon: LifeBuoy },
-  { href: "/admin/payments", label: "Платежи", icon: CreditCard },
+  { href: "/admin/billing", label: "Платные услуги", icon: ReceiptText },
+  { href: "/admin/ads", label: "Реклама", icon: Megaphone },
   { href: "/admin/promo", label: "Промокоды", icon: Tag },
   { href: "/admin/categories", label: "Категории", icon: FolderTree },
   { href: "/admin/geo", label: "Города и районы", icon: MapPinned },

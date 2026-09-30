@@ -1,6 +1,6 @@
 /**
  * Integration tests against a real PostgreSQL (ryadom_test).
- * Cover the critical marketplace flow, permissions, auth and payments.
+ * Cover the critical marketplace flow, permissions, auth and the zero-commission / optional monetisation model.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
@@ -17,7 +17,8 @@ import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
 import { runAdminAction } from "@/server/services/admin";
-import { checkout, fulfil, sandboxComplete } from "@/server/payments";
+import { activate, cancelInvoice, perks, requestService } from "@/server/billing";
+import { adClick, pickAd } from "@/server/services/ads";
 import { AppError } from "@/server/http/errors";
 import { resetRateLimits } from "@/server/http/rate-limit";
 
@@ -151,7 +152,7 @@ describe("Scenario A: client → order → response → chat → complete → re
     expect(read.readAt).not.toBeNull();
   });
 
-  it("client chooses; only assigned provider can start; completion charges commission", async () => {
+  it("client chooses; only assigned provider can start; completion takes no commission", async () => {
     const d = await getOrderDetail(orderId, client);
     await expectAppError(orderAction(stranger, orderId, { action: "choose", responseId: d.responses[0].id }), 403);
     await orderAction(client, orderId, { action: "choose", responseId: d.responses[0].id });
@@ -163,10 +164,11 @@ describe("Scenario A: client → order → response → chat → complete → re
     await orderAction(provider, orderId, { action: "complete", finalPrice: 1500 });
     const [o] = await db.select().from(s.orders).where(eq(s.orders.id, orderId));
     expect(o.status).toBe("completed");
-    expect(o.commissionAmount).toBe(Math.round(1500 * 0.08));
+    expect(o.agreedPrice).toBe(1500); // informational only — paid to the provider directly
+    expect(o).not.toHaveProperty("commissionAmount");
     const [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
     expect(p.ordersCompleted).toBe(1);
-    expect(p.balance).toBe(-o.commissionAmount!);
+    expect(p).not.toHaveProperty("balance");
   });
 
   it("only the client can review, once; rating updates", async () => {
@@ -210,30 +212,87 @@ describe("permissions", () => {
   });
 });
 
-describe("payments (sandbox)", () => {
-  it("checkout → sandbox success → Pro granted; fulfil is idempotent; promo applied", async () => {
-    const r = await checkout(provider, "pro_month", "WELCOME10").catch(async (e) => {
-      // promo codes are seeded only with demo data
-      if (e instanceof AppError && e.status === 400) return checkout(provider, "pro_month");
-      throw e;
-    });
-    expect(r.confirmationUrl).toMatch(/^\/pay\/sandbox\//);
-    await expectAppError(sandboxComplete(stranger, r.paymentId, "success"), 404);
-    await sandboxComplete(provider, r.paymentId, "success");
-    await fulfil(r.paymentId);
+describe("free base features", () => {
+  it("responses are unlimited for a provider without PRO", async () => {
+    const bulk = await db
+      .insert(s.orders)
+      .values(Array.from({ length: 40 }, (_, i) => ({ clientId: client.id, cityId, subcategoryId: santehnikId, title: `Заявка ${i}`, description: "Массовая заявка", address: "ул. Тестовая, 1", status: "cancelled" as const })))
+      .returning({ id: s.orders.id });
+    await db.insert(s.orderResponses).values(bulk.map((o) => ({ orderId: o.id, providerId: provider.provider!.id, message: "Готов" })));
+    const o = await createOrder(client, { subcategoryId: santehnikId, title: "Ещё одна", description: "Проверка лимита откликов", address: "ул. Тестовая, 2", urgency: "week", photos: [] }, cityId);
+    const r = await respondToOrder(provider, o.id, { message: "Возьмусь", price: 900 });
+    expect(r.conversationId).toBeTruthy();
+  });
+});
+
+describe("optional monetisation (no acquiring)", () => {
+  const on = () => (process.env.MONETIZATION_CHANNELS = "pro,promotion,ads");
+  const off = () => (process.env.MONETIZATION_CHANNELS = "");
+
+  it("with every channel off nothing can be bought and paid perks have no effect", async () => {
+    off();
+    await expectAppError(requestService(provider, "pro_month"), 404);
+    expect(perks({ proUntil: new Date(Date.now() + 86400000), boostedUntil: new Date(Date.now() + 86400000), highlightedUntil: null })).toEqual({ pro: false, boosted: false, highlighted: false });
+    expect(await pickAd("home")).toBeNull();
+  });
+
+  it("request → invoice (no charge) → admin activates → PRO; idempotent", async () => {
+    on();
+    const inv = await requestService(provider, "pro_month");
+    expect(inv.status).toBe("requested");
+    await expectAppError(requestService(provider, "pro_month"), 409);
+    let [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
+    expect(p.proUntil).toBeNull();
+    const adminNotes = await db.select().from(s.notifications).where(and(eq(s.notifications.userId, admin.id), eq(s.notifications.type, "billing")));
+    expect(adminNotes.length).toBeGreaterThan(0);
+
+    await expectAppError(runAdminAction(await asUser(stranger.id), { type: "invoice.activate", id: inv.id }), 403);
+    await runAdminAction(admin, { type: "invoice.activate", id: inv.id });
+    await activate(inv.id, admin.id);
     const subs = await db.select().from(s.subscriptions).where(eq(s.subscriptions.providerId, provider.provider!.id));
     expect(subs.length).toBe(1);
-    const [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
+    expect(subs[0].invoiceId).toBe(inv.id);
+    [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
     expect(p.proUntil!.getTime()).toBeGreaterThan(Date.now() + 25 * 86400000);
+    expect(p.verification).toBe("none"); // a paid badge never buys a trust level
+    expect(perks(p).pro).toBe(true);
+    off();
+    expect(perks(p).pro).toBe(false);
   });
-  it("failed sandbox payment grants nothing", async () => {
-    const r = await checkout(provider, "boost_24h");
-    await sandboxComplete(provider, r.paymentId, "fail");
-    const [pay] = await db.select().from(s.payments).where(eq(s.payments.id, r.paymentId));
-    expect(pay.status).toBe("failed");
-    await expectAppError(fulfil(r.paymentId), 400);
+
+  it("owner can cancel an open request; strangers cannot; cancelled cannot be activated", async () => {
+    on();
+    const inv = await requestService(provider, "boost_24h");
+    await expectAppError(cancelInvoice(stranger, inv.id), 404);
+    await cancelInvoice(provider, inv.id);
+    await expectAppError(activate(inv.id, admin.id), 409);
+    const [p] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
+    expect(p.boostedUntil).toBeNull();
   });
-  it("clients without provider profile cannot buy promotion", async () => {
-    await expectAppError(checkout(client, "boost_24h"), 403);
+
+  it("clients without a provider profile cannot request paid services", async () => {
+    on();
+    await expectAppError(requestService(client, "boost_24h"), 403);
+  });
+
+  it("admin can grant a service for free (no invoice)", async () => {
+    on();
+    const [p0] = await db.select().from(s.providers).where(eq(s.providers.id, provider.provider!.id));
+    await runAdminAction(admin, { type: "billing.grant", slug: p0.slug, productId: "highlight_7d" });
+    const promos = await db.select().from(s.promotions).where(eq(s.promotions.providerId, p0.id));
+    expect(promos.some((x) => x.kind === "highlight_7d" && x.invoiceId === null)).toBe(true);
+  });
+
+  it("ads are labelled data, served only when the channel is on; unsafe links are never followed", async () => {
+    on();
+    const now = Date.now();
+    await runAdminAction(admin, { type: "ad.create", slot: "search", title: "Тестовая реклама", linkUrl: "https://example.com/x", advertiser: "ООО Тест", erid: "TEST1", startsAt: new Date(now - 3600000).toISOString(), endsAt: new Date(now + 86400000).toISOString() });
+    const ad = await pickAd("search");
+    expect(ad?.advertiser).toBe("ООО Тест");
+    expect(await adClick(ad!.id)).toBe("https://example.com/x");
+    const [bad] = await db.insert(s.ads).values({ slot: "home", title: "x", linkUrl: "javascript:alert(1)", advertiser: "x", startsAt: new Date(now - 1000), endsAt: new Date(now + 1000000) }).returning();
+    expect(await adClick(bad.id)).toBeNull();
+    off();
+    expect(await pickAd("search")).toBeNull();
   });
 });

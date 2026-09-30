@@ -16,17 +16,16 @@ export default async function AdminDashboard() {
     { l: "Заказы всего", v: s.orders.total, d: `${s.orders.period} за 30 дней` },
     { l: "Активные", v: s.orders.active, d: "новые, отклики, в работе" },
     { l: "Завершённые", v: s.orders.completed, d: `${s.orders.cancelled} отменено` },
-    { l: "GMV", v: rub(s.money.gmv), d: `${rub(s.money.gmvPeriod)} за 30 дней` },
-    { l: "Комиссия", v: rub(s.money.commission), d: "с завершённых заказов" },
+    { l: "Объём заказов (GMV)", v: rub(s.money.gmv), d: `${rub(s.money.gmvPeriod)} за 30 дней · прямые расчёты, 0% комиссии` },
     { l: "Средний чек", v: rub(s.money.avgCheck), d: "завершённые заказы" },
     { l: "Конверсия в исполнителя", v: `${s.conversion.assignRate}%`, d: "заявки с выбранным исполнителем, 30 дн." },
     { l: "Конверсия в выполнение", v: `${s.conversion.completeRate}%`, d: "30 дней" },
     { l: "Время ответа", v: s.avgResponseMin != null ? `${s.avgResponseMin} мин` : "—", d: "среднее по исполнителям" },
-    { l: "Подписки и продвижение", v: rub(s.subscriptionRevenue), d: s.revenueIsTest ? "тестовые платежи (sandbox)" : "оплачено" },
+    { l: "Выручка платформы", v: rub(s.platformRevenue), d: `Pro, продвижение, реклама · ${rub(s.platformRevenuePeriod)} за 30 дней` },
   ];
   return (
     <AdminPage title="Обзор" subtitle="Ключевые метрики маркетплейса">
-      {(s.providers.pending > 0 || s.openReports > 0 || s.openTickets > 0) && (
+      {(s.providers.pending > 0 || s.openReports > 0 || s.openTickets > 0 || s.openInvoices > 0) && (
         <div className="mb-5 flex flex-wrap gap-2">
           {s.providers.pending > 0 && (
             <Link href="/admin/providers?status=pending">
@@ -36,6 +35,11 @@ export default async function AdminDashboard() {
           {s.openReports > 0 && (
             <Link href="/admin/reports">
               <Badge tone="danger">{s.openReports} открытых жалоб</Badge>
+            </Link>
+          )}
+          {s.openInvoices > 0 && (
+            <Link href="/admin/billing">
+              <Badge tone="accent">{s.openInvoices} заявок на платные услуги</Badge>
             </Link>
           )}
           {s.openTickets > 0 && (

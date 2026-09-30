@@ -8,6 +8,20 @@
       "when": 1790660152174,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790754496512,
+      "tag": "0001_drop_commission_and_acquiring",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790754529283,
+      "tag": "0002_invoices_and_ads",
+      "breakpoints": true
     }
   ]
 }

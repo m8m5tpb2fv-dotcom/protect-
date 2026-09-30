@@ -1,0 +1,70 @@
+/**
+ * Monetisation model — see docs/MONETIZATION.md.
+ *
+ *  - Zero commission. Clients pay providers directly (cash, card, transfer);
+ *    money between them never passes through the platform, so orders carry
+ *    no commission, balance or payment state.
+ *  - Base features are free forever and are never gated (FREE_FOREVER).
+ *  - Revenue is optional and comes only from channels that can be switched
+ *    off independently: PRO subscription, promotion of a profile, and ads.
+ *  - No acquiring in the MVP: a paid service is a request that an admin
+ *    activates after the provider pays by invoice outside the platform.
+ */
+
+export const CHANNELS = ["pro", "promotion", "ads"] as const;
+export type Channel = (typeof CHANNELS)[number];
+
+/** What every client and provider gets for free. Nothing here may depend on a channel. */
+export const FREE_FOREVER = [
+  "Создание заказов и отклики — без лимитов",
+  "Профиль исполнителя, услуги, цены и портфолио",
+  "Чат, контакты после выбора исполнителя, отзывы",
+  "Поиск, карта, уведомления и Telegram Mini App",
+  "Никакой комиссии: клиент платит исполнителю напрямую",
+] as const;
+
+/** Prices in rubles. */
+export const PLANS = {
+  pro_month: {
+    id: "pro_month",
+    channel: "pro",
+    title: "Pro",
+    description: "Значок Pro в профиле и карточке. На доступ к функциям и место в выдаче не влияет.",
+    price: 990,
+    periodDays: 30,
+  },
+} as const;
+
+export const PROMOTIONS = {
+  boost_24h: { id: "boost_24h", channel: "promotion", title: "Поднятие на 24 часа", description: "Профиль выше в поиске и категории, с пометкой «Реклама».", price: 149, hours: 24 },
+  boost_7d: { id: "boost_7d", channel: "promotion", title: "Поднятие на 7 дней", description: "Неделя в верхней части выдачи, с пометкой «Реклама».", price: 690, hours: 24 * 7 },
+  highlight_7d: { id: "highlight_7d", channel: "promotion", title: "Выделение карточки", description: "Акцентная рамка и метка «Рекомендуем».", price: 390, hours: 24 * 7 },
+} as const;
+
+export type PlanId = keyof typeof PLANS;
+export type PromotionId = keyof typeof PROMOTIONS;
+export type ProductId = PlanId | PromotionId;
+
+export type Product = { id: ProductId; channel: Channel; title: string; description: string; price: number; kind: "subscription" | "promotion" };
+
+export function getProduct(id: string): Product | null {
+  if (id in PLANS) {
+    const p = PLANS[id as PlanId];
+    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, kind: "subscription" };
+  }
+  if (id in PROMOTIONS) {
+    const p = PROMOTIONS[id as PromotionId];
+    return { id: p.id, channel: p.channel, title: p.title, description: p.description, price: p.price, kind: "promotion" };
+  }
+  return null;
+}
+
+/** Parses MONETIZATION_CHANNELS ("pro,promotion,ads"; empty or "off" = fully free). */
+export function parseChannels(raw: string | undefined): ReadonlySet<Channel> {
+  const set = new Set<Channel>();
+  for (const part of (raw ?? "").split(",")) {
+    const c = part.trim().toLowerCase();
+    if ((CHANNELS as readonly string[]).includes(c)) set.add(c as Channel);
+  }
+  return set;
+}

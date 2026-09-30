@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { pl, rub } from "@/lib/format";
 import { toneStyle } from "@/lib/tones";
 import { APP } from "@/config/app";
+import { AdSlot } from "@/components/domain/ad-slot";
 
 async function resolve(slug: string) {
   const catalog = await getCatalog();
@@ -137,6 +138,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           <ResultsWithMap items={result.items} favorites={[...favs]} center={[city.lat, city.lng]} me={q.lat != null && q.lng != null ? { lat: q.lat, lng: q.lng } : null} />
         )}
         <Pagination page={result.page} total={result.total} pageSize={result.pageSize} href={makeHref} />
+        <AdSlot slot="category" categoryId={r.cat.id} className="mt-6" />
       </div>
       {r.sub && (
         <section className="mt-12 max-w-3xl text-[15px] leading-relaxed text-muted">

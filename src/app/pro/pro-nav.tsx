@@ -10,7 +10,9 @@ const ITEMS = [
   { value: "/pro/billing", label: "Продвижение" },
 ];
 
-export function ProNav() {
+/** `billing` = at least one optional paid channel is on; otherwise the tab does not exist. */
+export function ProNav({ billing }: { billing: boolean }) {
   const pathname = usePathname();
-  return <Segmented className="w-full sm:w-auto" value={pathname} items={ITEMS.map((i) => ({ ...i, href: i.value }))} />;
+  const items = billing ? ITEMS : ITEMS.filter((i) => i.value !== "/pro/billing");
+  return <Segmented className="w-full sm:w-auto" value={pathname} items={items.map((i) => ({ ...i, href: i.value }))} />;
 }

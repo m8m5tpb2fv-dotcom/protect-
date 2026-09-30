@@ -6,6 +6,7 @@ import {
 } from "../db/schema";
 import { getCatalog } from "./catalog";
 import type { SearchQuery } from "@/lib/validation";
+import { channelOn, perks } from "../billing";
 
 export type ProviderCard = {
   id: string;
@@ -77,14 +78,14 @@ const cardColumns = (dist: SQL<number> | null) => ({
 type CardRow = Omit<ProviderCard, "isPro" | "isPromoted" | "isHighlighted"> & { proUntil: Date | null; boostedUntil: Date | null; highlightedUntil: Date | null };
 
 function toCard(r: CardRow): ProviderCard {
-  const now = Date.now();
   const { proUntil, boostedUntil, highlightedUntil, ...rest } = r;
+  const perk = perks({ proUntil, boostedUntil, highlightedUntil });
   return {
     ...rest,
     distanceKm: r.distanceKm == null ? null : Math.round(r.distanceKm * 10) / 10,
-    isPro: !!proUntil && proUntil.getTime() > now,
-    isPromoted: !!boostedUntil && boostedUntil.getTime() > now,
-    isHighlighted: !!highlightedUntil && highlightedUntil.getTime() > now,
+    isPro: perk.pro,
+    isPromoted: perk.boosted,
+    isHighlighted: perk.highlighted,
   };
 }
 
@@ -203,14 +204,15 @@ export async function searchProviders(cityId: number, q: SearchQuery, pageSize =
   if (q.verified) conds.push(sql`${providers.verification} <> 'none'`);
   if (q.priceMax) conds.push(sql`coalesce(${providers.priceFrom}, 0) <= ${q.priceMax}`);
 
-  const promoted = sql<number>`(case when ${providers.boostedUntil} > now() then 1 else 0 end)`;
+  // Paid boost only affects order while the "promotion" channel is on; boosted cards are labelled «Реклама».
+  const promoted: SQL[] = channelOn("promotion") ? [desc(sql`(case when ${providers.boostedUntil} > now() then 1 else 0 end)`)] : [];
   const sort = q.sort ?? (q.q ? "relevance" : hasGeo ? "distance" : "rating");
   const order: SQL[] = [];
   if (sort === "distance" && dist) order.push(sql`${dist} asc nulls last`);
   else if (sort === "price") order.push(sql`${providers.priceFrom} asc nulls last`);
   else if (sort === "reviews") order.push(desc(providers.reviewsCount));
-  else if (sort === "relevance") order.push(desc(promoted), sql`${relevance} desc`, desc(smoothRating));
-  else order.push(desc(promoted), desc(smoothRating));
+  else if (sort === "relevance") order.push(...promoted, sql`${relevance} desc`, desc(smoothRating));
+  else order.push(...promoted, desc(smoothRating));
   order.push(desc(providers.isAvailable), asc(providers.id));
 
   const where = and(...conds);
@@ -236,7 +238,7 @@ export async function listProviders(
   const conds: SQL[] = [eq(providers.status, "active"), eq(providers.cityId, cityId)];
   if (opts.subIds?.length) conds.push(inArray(providers.primarySubcategoryId, opts.subIds));
   if (opts.sort === "available") conds.push(eq(providers.isAvailable, true));
-  if (opts.sort === "promoted") conds.push(gt(providers.boostedUntil, new Date()));
+  if (opts.sort === "promoted") conds.push(channelOn("promotion") ? gt(providers.boostedUntil, new Date()) : sql`false`);
   if (opts.excludeId) conds.push(sql`${providers.id} <> ${opts.excludeId}`);
   const order =
     opts.sort === "new"

@@ -33,7 +33,6 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
             </td>
             <td className="tabular">
               {o.agreedPrice != null ? rub(o.agreedPrice) : "—"}
-              {o.commissionAmount ? <p className="text-[12px] text-muted">комиссия {rub(o.commissionAmount)}</p> : null}
             </td>
             <td>{dateShort(o.createdAt)}</td>
             <td>{!["completed", "cancelled"].includes(o.status) && <AdminAction payload={{ type: "order.cancel", id: o.id }} label="Отменить" prompt="Причина отмены" promptKey="reason" variant="danger" />}</td>

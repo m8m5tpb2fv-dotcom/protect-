@@ -13,6 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { CatalogIcon } from "@/components/ui/catalog-icon";
 import { pl } from "@/lib/format";
+import { AdSlot } from "@/components/domain/ad-slot";
 
 export async function generateMetadata({ searchParams }: PageProps<"/search">): Promise<Metadata> {
   const q = (await searchParams).q;
@@ -80,6 +81,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
           <ResultsWithMap items={result.items} favorites={[...favs]} center={[city.lat, city.lng]} me={q.lat != null && q.lng != null ? { lat: q.lat, lng: q.lng } : null} />
         )}
         <Pagination page={result.page} total={result.total} pageSize={result.pageSize} href={makeHref} />
+        <AdSlot slot="search" className="mt-6" />
       </div>
     </main>
   );

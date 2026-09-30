@@ -1,23 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BellRing, MessageSquareText, Percent, ShieldCheck } from "lucide-react";
-import { APP, FREE_RESPONSES_PER_MONTH } from "@/config/app";
+import { BellRing, HandCoins, MessageSquareText, ShieldCheck } from "lucide-react";
 import { getCurrentUser } from "@/server/auth/session";
 import { providerFormData } from "@/server/services/form-data";
 import { ProviderForm, DEFAULT_SCHEDULE } from "@/components/domain/provider-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonClass } from "@/components/ui/button";
 
-export const metadata: Metadata = { title: "Стать исполнителем", description: `Получайте заказы от клиентов в Саратове. Бесплатный профиль, ${FREE_RESPONSES_PER_MONTH} откликов в месяц, комиссия только с выполненных заказов.` };
+export const metadata: Metadata = { title: "Стать исполнителем", description: "Получайте заказы от клиентов в Саратове. Бесплатный профиль, отклики без лимитов и без комиссии — клиенты платят вам напрямую." };
 
 export default async function BecomeProviderPage() {
   const user = await getCurrentUser();
   if (user?.provider) redirect("/pro");
   const perks = [
     { icon: BellRing, t: "Заявки рядом", d: "Уведомления о новых заказах в вашем районе — в приложении и Telegram." },
-    { icon: MessageSquareText, t: `${FREE_RESPONSES_PER_MONTH} откликов бесплатно`, d: "Каждый месяц. Безлимит — в тарифе Pro." },
-    { icon: Percent, t: `Комиссия ${Math.round(APP.commissionRate * 100)}%`, d: "Только с выполненных заказов. Никаких абонентских плат." },
+    { icon: MessageSquareText, t: "Отклики без лимитов", d: "Бесплатно. Никаких пакетов и абонентских плат." },
+    { icon: HandCoins, t: "0% комиссии", d: "Клиент платит вам напрямую — наличными, картой или переводом." },
     { icon: ShieldCheck, t: "Статус «Проверенный»", d: "Загрузите документы — клиенты доверяют таким профилям больше." },
   ];
   return (

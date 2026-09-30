@@ -1,6 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, ne, or, sql, gte } from "drizzle-orm";
-import { APP, FREE_RESPONSES_PER_MONTH } from "@/config/app";
+import { and, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { URGENCY } from "@/lib/format";
 import type { CreateOrderInput } from "@/lib/validation";
 import { db, type DbOrTx } from "../db";
@@ -192,17 +191,7 @@ export async function respondToOrder(user: CurrentUser, orderId: string, input: 
   if (order.directProviderId && order.directProviderId !== p.id) throw forbidden();
   const [dup] = await db.select({ id: orderResponses.id }).from(orderResponses).where(and(eq(orderResponses.orderId, orderId), eq(orderResponses.providerId, p.id)));
   if (dup) throw conflict("Вы уже откликнулись на этот заказ");
-  const isPro = !!p.proUntil && p.proUntil.getTime() > Date.now();
-  if (!isPro) {
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const [{ used }] = await db
-      .select({ used: sql<number>`count(*)::int` })
-      .from(orderResponses)
-      .where(and(eq(orderResponses.providerId, p.id), gte(orderResponses.createdAt, monthStart)));
-    if (used >= FREE_RESPONSES_PER_MONTH) throw forbidden(`Лимит бесплатных откликов (${FREE_RESPONSES_PER_MONTH} в месяц) исчерпан. Подключите ${APP.name} Pro для безлимита.`);
-  }
+  // Responses are a base feature: unlimited and free for every provider, PRO or not.
 
   const result = await db.transaction(async (tx) => {
     const [resp] = await tx.insert(orderResponses).values({ orderId, providerId: p.id, message: input.message, price: input.price ?? null, eta: input.eta ?? null }).returning();
@@ -295,15 +284,15 @@ export async function orderAction(user: CurrentUser, orderId: string, a: Action)
     case "complete": {
       if (!(role === "client" || isAssignedProvider)) throw forbidden();
       if (order.status !== "in_progress" && order.status !== "assigned") throw conflict("Заказ нельзя завершить в текущем статусе");
+      // The price is informational: the client pays the provider directly and the platform takes no commission.
       const price = a.finalPrice ?? order.agreedPrice ?? null;
-      const commission = price != null ? Math.round(price * APP.commissionRate) : null;
       await db.transaction(async (tx) => {
-        await tx.update(orders).set({ status: "completed", completedAt: new Date(), agreedPrice: price, commissionAmount: commission }).where(eq(orders.id, orderId));
+        await tx.update(orders).set({ status: "completed", completedAt: new Date(), agreedPrice: price }).where(eq(orders.id, orderId));
         await tx
           .update(providers)
-          .set({ ordersCompleted: sql`${providers.ordersCompleted} + 1`, clientsCount: sql`${providers.clientsCount} + 1`, balance: sql`${providers.balance} - ${commission ?? 0}` })
+          .set({ ordersCompleted: sql`${providers.ordersCompleted} + 1`, clientsCount: sql`${providers.clientsCount} + 1` })
           .where(eq(providers.id, order.providerId!));
-        await logOrderEvent(tx, orderId, user.id, "completed", { price, commission, by: role });
+        await logOrderEvent(tx, orderId, user.id, "completed", { price, by: role });
       });
       await recomputeProviderStats(db, order.providerId!);
       const pu = await providerUser(order.providerId!);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { getCurrentUser } from "@/server/auth/session";
+import { anyChannelOn } from "@/server/billing";
 import { ProNav } from "./pro-nav";
 
 export default async function ProLayout({ children }: LayoutProps<"/pro">) {
@@ -20,7 +21,7 @@ export default async function ProLayout({ children }: LayoutProps<"/pro">) {
         </Link>
       </div>
       <div className="sticky top-[calc(var(--safe-top)+60px)] z-20 -mx-4 mt-4 bg-bg/85 px-4 py-2 backdrop-blur-xl lg:top-[88px] lg:mx-0 lg:px-0">
-        <ProNav />
+        <ProNav billing={anyChannelOn()} />
       </div>
       <div className="mt-4">{children}</div>
     </main>

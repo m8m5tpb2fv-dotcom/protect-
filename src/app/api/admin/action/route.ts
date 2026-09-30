@@ -23,6 +23,22 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("subcategory.create"), categoryId: z.number().int(), name: z.string().trim().min(2).max(60), namePlural: z.string().trim().min(2).max(60), slug: z.string().regex(/^[a-z0-9-]{2,40}$/), icon: z.string().regex(/^[A-Za-z0-9]{2,40}$/), keywords: z.string().max(500).optional() }),
   z.object({ type: z.literal("subcategory.toggle"), id: z.number().int(), isActive: z.boolean() }),
   z.object({ type: z.literal("content.update"), key: z.string().regex(/^[a-z0-9._-]{2,60}$/), title: z.string().trim().min(1).max(200), body: z.string().max(4000), isActive: z.boolean() }),
+  z.object({ type: z.literal("invoice.activate"), id: z.string().uuid() }),
+  z.object({ type: z.literal("invoice.cancel"), id: z.string().uuid(), note: z.string().trim().min(2).max(300) }),
+  z.object({ type: z.literal("billing.grant"), slug: z.string().trim().min(2).max(80), productId: z.string().min(1).max(40) }),
+  z.object({
+    type: z.literal("ad.create"),
+    slot: z.enum(["home", "category", "search"]),
+    categoryId: z.preprocess((v) => (v == null || v === "" ? null : Number(v)), z.number().int().positive().nullable()).optional(),
+    title: z.string().trim().min(2).max(80),
+    body: z.string().trim().max(200).optional(),
+    linkUrl: z.string().trim().url().max(500).refine((u) => /^https?:\/\//i.test(u), "Ссылка должна начинаться с http(s)://"),
+    advertiser: z.string().trim().min(2).max(120),
+    erid: z.string().trim().max(64).nullish(),
+    startsAt: z.string().datetime(),
+    endsAt: z.string().datetime(),
+  }),
+  z.object({ type: z.literal("ad.toggle"), id: z.string().uuid(), isActive: z.boolean() }),
 ]);
 
 export const POST = api(async (req) => {

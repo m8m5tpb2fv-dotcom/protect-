@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock3, Inbox, MapPin, Star, Trophy, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Inbox, MapPin, Star, Trophy, Users } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { pageProvider } from "@/server/auth/session";
 import { db } from "@/server/db";
@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { CatalogIcon } from "@/components/ui/catalog-icon";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { isFuture } from "@/lib/format";
-import { km, pl, relative, rating, rub, URGENCY } from "@/lib/format";
+import { anyChannelOn, perks } from "@/server/billing";
+import { km, pl, plural, relative, rating, rub, URGENCY } from "@/lib/format";
 import { toneStyle } from "@/lib/tones";
 import { AvailabilityToggle } from "./availability-toggle";
 
@@ -25,13 +25,13 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
   const [[p], feed, mine] = await Promise.all([db.select().from(providers).where(eq(providers.id, user.provider.id)), providerFeed(user.provider.id), providerOrders(user.provider.id)]);
   const active = mine.filter((o) => o.status === "assigned" || o.status === "in_progress");
   const completed = mine.filter((o) => o.status === "completed");
-  const isPro = isFuture(p.proUntil);
+  const perk = perks(p);
 
   const stats = [
     { icon: Star, v: p.reviewsCount ? rating(p.ratingAvg) : "—", l: pl(p.reviewsCount, ["отзыв", "отзыва", "отзывов"]) },
     { icon: Trophy, v: p.ordersCompleted, l: "выполнено" },
     { icon: Clock3, v: p.responseTimeMin != null ? `${p.responseTimeMin} мин` : "—", l: "время ответа" },
-    { icon: Wallet, v: rub(Math.abs(p.balance)), l: p.balance < 0 ? "комиссия к оплате" : "баланс" },
+    { icon: Users, v: p.clientsCount, l: plural(p.clientsCount, ["клиент", "клиента", "клиентов"]) },
   ];
 
   return (
@@ -70,8 +70,14 @@ export default async function ProHome({ searchParams }: PageProps<"/pro">) {
         <section className="rounded-[28px] bezel p-5">
           <AvailabilityToggle initial={p.isAvailable} disabled={p.status !== "active"} />
           <div className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-[13.5px]">
-            {isPro ? <Badge tone="accent">Pro до {p.proUntil!.toLocaleDateString("ru-RU")}</Badge> : <Link href="/pro/billing" className="font-semibold underline">Подключить Pro</Link>}
-            {isFuture(p.boostedUntil) && <Badge tone="ink">Поднят в поиске</Badge>}
+            <Badge tone="success">Без комиссии — клиенты платят вам напрямую</Badge>
+            {perk.pro && <Badge tone="accent">Pro до {p.proUntil!.toLocaleDateString("ru-RU")}</Badge>}
+            {perk.boosted && <Badge tone="ink">Поднят в поиске</Badge>}
+            {!perk.pro && !perk.boosted && anyChannelOn() && (
+              <Link href="/pro/billing" className="ml-auto font-semibold underline">
+                Продвижение
+              </Link>
+            )}
           </div>
         </section>
         <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
