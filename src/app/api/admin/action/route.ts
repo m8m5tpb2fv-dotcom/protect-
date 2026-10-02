@@ -25,7 +25,7 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("content.update"), key: z.string().regex(/^[a-z0-9._-]{2,60}$/), title: z.string().trim().min(1).max(200), body: z.string().max(4000), isActive: z.boolean() }),
   z.object({ type: z.literal("invoice.activate"), id: z.string().uuid() }),
   z.object({ type: z.literal("invoice.cancel"), id: z.string().uuid(), note: z.string().trim().min(2).max(300) }),
-  z.object({ type: z.literal("billing.grant"), slug: z.string().trim().min(2).max(80), productId: z.string().min(1).max(40) }),
+  z.object({ type: z.literal("billing.grant"), slug: z.string().trim().min(2).max(300), productId: z.string().min(1).max(40) }),
   z.object({
     type: z.literal("ad.create"),
     slot: z.enum(["home", "category", "search"]),

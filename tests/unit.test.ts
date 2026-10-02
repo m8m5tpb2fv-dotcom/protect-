@@ -237,3 +237,12 @@ describe("contact masking in order text", () => {
     for (const s of ["Бюджет 15 000 – 20 000 ₽", "Нужно 12.05.2026 с 10:00 до 18:00", "Ванная 2,5 × 1,7 м, квартира 45", "Смеситель Grohe 32 663 001", "Кв. 12, этаж 5, дом 1978 года"]) expect(maskContacts(s)).toBe(s);
   });
 });
+
+describe("admin: profile address from a link", () => {
+  it("accepts a slug or a whole profile link", async () => {
+    const { profileSlug } = await import("@/server/services/admin");
+    expect(profileSlug("ivan-petrov")).toBe("ivan-petrov");
+    expect(profileSlug("  https://protect-production-9d3e.up.railway.app/provider/sergey-kolobov?utm=1#reviews ")).toBe("sergey-kolobov");
+    expect(profileSlug("/provider/sergey-kolobov/")).toBe("sergey-kolobov");
+  });
+});

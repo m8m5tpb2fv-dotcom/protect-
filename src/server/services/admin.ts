@@ -12,6 +12,13 @@ import { recomputeProviderStats } from "./provider-stats";
 import { purgeDemo } from "./demo";
 import { activate, cancelInvoice, grant } from "../billing";
 
+/** Accepts the profile address as is or a whole link to it: «https://…/provider/ivan-petrov?x=1» → «ivan-petrov». */
+export function profileSlug(input: string) {
+  const s = input.trim();
+  const m = s.match(/\/provider\/([^/?#\s]+)/);
+  return decodeURIComponent(m ? m[1] : s.replace(/^\/+|\/+$/g, ""));
+}
+
 export async function audit(admin: CurrentUser, action: string, targetType: string, targetId: string, data?: Record<string, unknown>) {
   await db.insert(adminActions).values({ adminId: admin.id, action, targetType, targetId, data });
 }
@@ -397,7 +404,7 @@ export async function runAdminAction(admin: CurrentUser, a: AdminActionInput) {
       await cancelInvoice(admin, a.id, a.note);
       break;
     case "billing.grant": {
-      const [p] = await db.select({ id: providers.id }).from(providers).where(eq(providers.slug, a.slug.trim()));
+      const [p] = await db.select({ id: providers.id }).from(providers).where(eq(providers.slug, profileSlug(a.slug)));
       if (!p) throw notFound("Исполнитель с таким адресом профиля не найден");
       await grant(p.id, a.productId);
       break;

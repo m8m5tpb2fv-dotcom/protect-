@@ -36,7 +36,7 @@ export default async function AdminBilling({ searchParams }: PageProps<"/admin/b
           <AdminForm
             type="billing.grant"
             fields={[
-              { name: "slug", label: "Адрес профиля исполнителя", placeholder: "ivan-petrov-elektrik", required: true },
+              { name: "slug", label: "Ссылка на профиль исполнителя", placeholder: "https://…/provider/ivan-petrov-elektrik", required: true },
               { name: "productId", label: "Услуга", kind: "select", required: true, options: products.map((x) => ({ v: x.id, l: x.title })) },
             ]}
             submitLabel="Подключить"
