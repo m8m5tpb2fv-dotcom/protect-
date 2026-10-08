@@ -38,6 +38,9 @@ export default async function AdminUsers({ searchParams }: PageProps<"/admin/use
                 <div className="flex flex-wrap gap-1.5">
                   <AdminAction payload={{ type: "user.block", id: u.id, blocked: !u.isBlocked }} label={u.isBlocked ? "Разблокировать" : "Заблокировать"} variant={u.isBlocked ? "secondary" : "danger"} confirmText={u.isBlocked ? undefined : `Заблокировать ${u.name}? Все сессии будут завершены.`} />
                   {me.role === "admin" && u.role !== "moderator" && <AdminAction payload={{ type: "user.role", id: u.id, role: "moderator" }} label="Сделать модератором" variant="ghost" />}
+                  {me.role === "admin" && u.role !== "admin" && (
+                    <AdminAction payload={{ type: "user.role", id: u.id, role: "admin" }} label="Сделать администратором" variant="ghost" confirmText={`Дать «${u.name}» полный доступ к админке, оплатам и удалению данных?`} />
+                  )}
                   {me.role === "admin" && u.role !== "user" && <AdminAction payload={{ type: "user.role", id: u.id, role: "user" }} label="Снять роль" variant="ghost" />}
                 </div>
               )}
