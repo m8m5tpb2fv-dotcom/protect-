@@ -47,13 +47,16 @@ class LocalDriver implements StorageDriver {
 class S3Driver implements StorageDriver {
   private client = new AwsClient({ accessKeyId: env.S3_ACCESS_KEY_ID, secretAccessKey: env.S3_SECRET_ACCESS_KEY, region: env.S3_REGION, service: "s3" });
   private url(key: string) {
-    return `${env.S3_ENDPOINT.replace(/\/$/, "")}/${env.S3_BUCKET}/${key.split("/").map(encodeURIComponent).join("/")}`;
+    const path = key.split("/").map(encodeURIComponent).join("/");
+    const endpoint = new URL(env.S3_ENDPOINT);
+    if (env.S3_URL_STYLE === "virtual-host") return `${endpoint.protocol}//${env.S3_BUCKET}.${endpoint.host}/${path}`;
+    return `${env.S3_ENDPOINT.replace(/\/$/, "")}/${env.S3_BUCKET}/${path}`;
   }
   async put(key: string, data: Buffer, contentType: string) {
     const res = await this.client.fetch(this.url(key), {
       method: "PUT",
       body: new Uint8Array(data),
-      headers: { "content-type": contentType, "cache-control": "public, max-age=31536000, immutable", ...(key.startsWith("private/") ? {} : { "x-amz-acl": "public-read" }) },
+      headers: { "content-type": contentType, "cache-control": "public, max-age=31536000, immutable", ...(key.startsWith("private/") || !env.S3_PUBLIC_URL ? {} : { "x-amz-acl": "public-read" }) },
     });
     if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
   }
@@ -76,3 +79,16 @@ export function storage(): StorageDriver {
 
 export const fileUrl = (key: string) => `/files/${key}`;
 export const keyFromUrl = (url: string) => (url.startsWith("/files/") ? url.slice(7) : null);
+
+/** Startup self-check: writes and reads back a tiny file so a misconfigured bucket shows up in the logs at once. */
+export async function probeStorage() {
+  const key = "health/probe.txt";
+  const body = Buffer.from(`ok ${new Date().toISOString()}`);
+  try {
+    await storage().put(key, body, "text/plain");
+    const back = await storage().get(key);
+    return back?.data.equals(body) ? { ok: true as const, driver: env.STORAGE_DRIVER } : { ok: false as const, driver: env.STORAGE_DRIVER, error: "read-back mismatch" };
+  } catch (e) {
+    return { ok: false as const, driver: env.STORAGE_DRIVER, error: String(e) };
+  }
+}

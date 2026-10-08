@@ -30,6 +30,8 @@ const schema = z.object({
   S3_ACCESS_KEY_ID: z.string().default(""),
   S3_SECRET_ACCESS_KEY: z.string().default(""),
   S3_PUBLIC_URL: z.string().default(""),
+  /** "path" (endpoint/bucket/key — Yandex, Selectel, MinIO) or "virtual-host" (bucket.endpoint/key — Railway Buckets, AWS). */
+  S3_URL_STYLE: z.enum(["path", "virtual-host"]).default("path"),
   /** Optional revenue channels: "pro,promotion,ads". Empty = everything free, no paid offers anywhere. */
   MONETIZATION_CHANNELS: z.string().default(""),
   SMS_PROVIDER: z.enum(["console", "smsru"]).default("console"),
