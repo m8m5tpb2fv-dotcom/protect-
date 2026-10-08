@@ -3,7 +3,7 @@
  * Cover the critical marketplace flow, permissions, auth and the zero-commission / optional monetisation model.
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as s from "@/server/db/schema";
@@ -15,6 +15,7 @@ import { signInitData } from "@/server/telegram/init-data";
 import { createOrder, dismissOrder, getOrderDetail, leaveReview, listClientOrders, orderAction, providerFeed, respondToOrder } from "@/server/services/orders";
 import { handleUpdate } from "@/server/telegram/handlers";
 import { demoSummary, purgeDemo } from "@/server/services/demo";
+import { decryptBackup, lastBackup, runBackup } from "@/server/backup";
 import { createProviderProfile } from "@/server/services/provider-self";
 import { listMessages, sendChatMessage, startConversation } from "@/server/services/chat";
 import { searchProviders } from "@/server/services/providers";
@@ -450,6 +451,44 @@ describe("client contacts and Telegram response cards", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+});
+
+describe("encrypted database backups to the admins' Telegram", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.BACKUP_PASSWORD;
+  });
+
+  it("refuses without a password, then sends an encrypted, restorable copy", async () => {
+    delete process.env.BACKUP_PASSWORD;
+    await expect(runBackup("manual")).rejects.toThrow(/BACKUP_PASSWORD/);
+    process.env.BACKUP_PASSWORD = "correct-horse-battery";
+    await db.update(s.users).set({ telegramId: "91000099" }).where(eq(s.users.id, admin.id));
+
+    const sent: { chatId: string; file: Buffer; name: string }[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init: { body: FormData }) => {
+      const doc = init.body.get("document") as File;
+      sent.push({ chatId: String(init.body.get("chat_id")), file: Buffer.from(await doc.arrayBuffer()), name: doc.name });
+      return new Response(JSON.stringify({ ok: true, result: {} }));
+    });
+    await expectAppError(runAdminAction(await asUser(stranger.id), { type: "backup.run" }), 403);
+    const r = (await runAdminAction(admin, { type: "backup.run" })) as Awaited<ReturnType<typeof runBackup>>;
+    expect(r.sent).toBe(1);
+    expect(sent[0].chatId).toBe("91000099");
+    expect(sent[0].name).toMatch(/^ryadom-backup-.*\.rydb$/);
+
+    // the file is useless without the password and complete with it
+    expect(sent[0].file.toString("latin1")).not.toContain("client@test.local");
+    expect(() => decryptBackup(sent[0].file, "wrong-password-123")).toThrow(/пароль/);
+    const payload = decryptBackup(sent[0].file, "correct-horse-battery");
+    const [{ n }] = (await db.execute<{ n: number }>(sql`select count(*)::int n from users`)).rows;
+    expect(payload.tables.users.length).toBe(n);
+    expect(payload.tables.users.some((u) => (u as { email: string }).email === "client@test.local")).toBe(true);
+    expect(Object.keys(payload.tables)).toEqual(expect.arrayContaining(["orders", "providers", "reviews", "messages", "invoices"]));
+
+    const last = await lastBackup();
+    expect(last).toMatchObject({ sent: 1, stale: false });
   });
 });
 

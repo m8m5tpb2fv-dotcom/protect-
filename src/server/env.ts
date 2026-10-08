@@ -13,6 +13,8 @@ const schema = z.object({
     .string()
     .default(process.env.NEXT_PUBLIC_APP_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : "http://localhost:3000")),
   SESSION_SECRET: z.string().default(""),
+  /** Encrypts the daily database backup sent to admins in Telegram (src/server/backup). Empty = no backups. */
+  BACKUP_PASSWORD: z.string().default(""),
   TELEGRAM_BOT_TOKEN: z.string().default(""),
   /** Optional: derived from the bot token + SESSION_SECRET when empty (see telegram/config.ts). */
   TELEGRAM_WEBHOOK_SECRET: z.string().default(""),

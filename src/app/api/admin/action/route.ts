@@ -40,6 +40,7 @@ const schema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("ad.toggle"), id: z.string().uuid(), isActive: z.boolean() }),
   z.object({ type: z.literal("demo.purge"), confirm: z.literal("УДАЛИТЬ") }),
+  z.object({ type: z.literal("backup.run") }),
 ]);
 
 export const POST = api(async (req) => {

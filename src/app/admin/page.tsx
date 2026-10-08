@@ -2,6 +2,7 @@ import Link from "next/link";
 import { pageAdmin } from "@/server/auth/session";
 import { dashboardStats } from "@/server/services/admin";
 import { demoSummary } from "@/server/services/demo";
+import { backupEnabled, lastBackup } from "@/server/backup";
 import { AdminAction } from "@/components/admin/action-button";
 import { AdminPage } from "@/components/admin/table";
 import { ColumnChart, RankBars } from "@/components/admin/charts";
@@ -11,7 +12,9 @@ import { cn } from "@/lib/cn";
 
 export default async function AdminDashboard() {
   const me = await pageAdmin();
-  const [s, demo] = await Promise.all([dashboardStats(30), demoSummary()]);
+  const [s, demo, backup] = await Promise.all([dashboardStats(30), demoSummary(), lastBackup()]);
+  const backupOn = backupEnabled();
+  const backupStale = !backup || backup.stale;
   const tiles = [
     { l: "Пользователи", v: s.users.total, d: `+${s.users.fresh} за 30 дней` },
     { l: "Исполнители", v: s.providers.total, d: `+${s.providers.fresh} · ${s.providers.available} свободны` },
@@ -51,6 +54,20 @@ export default async function AdminDashboard() {
           )}
         </div>
       )}
+      <section className={cn("mb-5 flex flex-wrap items-center gap-4 rounded-[24px] p-4", backupOn && !backupStale ? "bezel" : "border border-danger/40 bg-danger/10")}>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Резервные копии базы</p>
+          <p className="mt-1 text-[13.5px] text-muted">
+            {!backupOn
+              ? "Выключены: в Railway не задана переменная BACKUP_PASSWORD (не короче 12 символов)."
+              : backup
+                ? `Последняя: ${backup.at.toLocaleString("ru-RU", { timeZone: "Europe/Saratov" })}${backup.sent ? " — отправлена вам в Telegram." : " — не дошла до Telegram."} Копия делается каждую ночь в 03:30 и приходит администраторам в бот.`
+                : "Ещё не было ни одной копии. Копия делается каждую ночь в 03:30 и приходит администраторам в бот."}
+            {!me.telegramId && " У вашего аккаунта не привязан Telegram — копии вам приходить не будут."}
+          </p>
+        </div>
+        {me.role === "admin" && backupOn && <AdminAction payload={{ type: "backup.run" }} label="Сделать копию сейчас" variant="secondary" />}
+      </section>
       {demo.users > 0 && (
         <section className="mb-5 flex flex-wrap items-center gap-4 rounded-[24px] border border-warning/40 bg-warning/10 p-4">
           <div className="min-w-0 flex-1">
